@@ -29,9 +29,6 @@
 \section t31_tests_page_sec_1 What does it do?
 */
 
-/* Enable the following definition to enable direct probing into the FAX structures */
-//#define WITH_SPANDSP_INTERNALS
-
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -47,10 +44,6 @@
 #include <string.h>
 #include <assert.h>
 #include <sndfile.h>
-
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
 
 #include "spandsp.h"
 #include "spandsp/t30_fcf.h"
@@ -89,7 +82,7 @@ g1050_state_t *path_b_to_a;
 
 double when = 0.0;
 
-int t38_mode = FALSE;
+int t38_mode = false;
 
 #define EXCHANGE(a,b) {a, sizeof(a) - 1, b, sizeof(b) - 1}
 #define RESPONSE(b) {"", 0, b, sizeof(b) - 1}
@@ -112,15 +105,18 @@ static const struct command_response_s fax_send_test_seq[] =
     RESPONSE("\r\nOK\r\n"),
     EXCHANGE("AT+FRH=3\r", "\r\nCONNECT\r\n"),
     //<DIS frame data>
-    RESPONSE("\xFF\x13\x80\x00\xEE\xF8\x80\x80\x91\x80\x80\x80\x18\x78\x57\x10\x03"), // For audio FAXing
-    //RESPONSE("\xFF\x13\x80\x04\xEE\xF8\x80\x80\x91\x80\x80\x80\x18\xE4\xE7\x10\x03"),   // For T.38 FAXing
+#if 1
+    RESPONSE("\xFF\x13\x80\x00\xEE\xF8\x80\x80\x99\x80\x80\x80\x18\x58\x0D\x10\x03"),   // For audio FAXing
+#else
+    RESPONSE("\xFF\x13\x80\x04\xEE\xF8\x80\x80\x99\x80\x80\x80\x18\xC4\xBD\x10\x03"),   // For T.38 FAXing
+#endif
     RESPONSE("\r\nOK\r\n"),
     //EXCHANGE("AT+FRH=3\r", "\r\nNO CARRIER\r\n"),
     EXCHANGE("AT+FTH=3\r", "\r\nCONNECT\r\n"),
     //<TSI frame data>
     EXCHANGE("\xFF\x03\x43\x32\x32\x32\x32\x32\x32\x32\x32\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x10\x03", "\r\nCONNECT\r\n"),
     //<DCS frame data>
-    EXCHANGE("\xFF\x13\x83\x01\xC6\x80\x80\x80\x80\x01\xFD\x13\x10\x03", "\r\nOK\r\n"),
+    EXCHANGE("\xFF\x13\x83\x01\xC6\x80\x80\x80\x80\x01\x10\x03", "\r\nOK\r\n"),
     //Do a wait for timed silence at this point, or there won't be one in the tests
     EXCHANGE("AT+FRS=7\r", "\r\nOK\r\n"),
     //EXCHANGE("AT+FTS=8;+FTM=96\r", "\r\nCONNECT\r\n"),
@@ -272,11 +268,11 @@ int countdown = 0;
 int command_response_test_step = -1;
 char response_buf[1000];
 int response_buf_ptr = 0;
-int answered = FALSE;
-int kick = FALSE;
-int dled = FALSE;
-int done = FALSE;
-int sequence_terminated = FALSE;
+int answered = false;
+int kick = false;
+int dled = false;
+int done = false;
+int sequence_terminated = false;
 
 static const struct command_response_s *fax_test_seq;
 
@@ -284,27 +280,31 @@ int test_seq_ptr = 0;
 
 t31_state_t *t31_state;
 
-static int phase_b_handler(t30_state_t *s, void *user_data, int result)
+static int phase_b_handler(void *user_data, int result)
 {
-    int i;
+    int ch;
+    t30_state_t *s;
     char tag[20];
 
-    i = (int) (intptr_t) user_data;
-    snprintf(tag, sizeof(tag), "%c: Phase B", i);
-    printf("%c: Phase B handler on channel %c - (0x%X) %s\n", i, i, result, t30_frametype(result));
+    ch = 'A';
+    s = (t30_state_t *) user_data;
+    snprintf(tag, sizeof(tag), "%c: Phase B", ch);
+    printf("%c: Phase B handler on channel %c - (0x%X) %s\n", ch, ch, result, t30_frametype(result));
     fax_log_rx_parameters(s, tag);
     return T30_ERR_OK;
 }
 /*- End of function --------------------------------------------------------*/
 
-static int phase_d_handler(t30_state_t *s, void *user_data, int result)
+static int phase_d_handler(void *user_data, int result)
 {
-    int i;
+    int ch;
+    t30_state_t *s;
     char tag[20];
 
-    i = (int) (intptr_t) user_data;
-    snprintf(tag, sizeof(tag), "%c: Phase D", i);
-    printf("%c: Phase D handler on channel %c - (0x%X) %s\n", i, i, result, t30_frametype(result));
+    ch = 'A';
+    s = (t30_state_t *) user_data;
+    snprintf(tag, sizeof(tag), "%c: Phase D", ch);
+    printf("%c: Phase D handler on channel %c - (0x%X) %s\n", ch, ch, result, t30_frametype(result));
     fax_log_page_transfer_statistics(s, tag);
     fax_log_tx_parameters(s, tag);
     fax_log_rx_parameters(s, tag);
@@ -312,68 +312,74 @@ static int phase_d_handler(t30_state_t *s, void *user_data, int result)
 }
 /*- End of function --------------------------------------------------------*/
 
-static void phase_e_handler(t30_state_t *s, void *user_data, int result)
+static void phase_e_handler(void *user_data, int result)
 {
-    int i;
+    int ch;
+    t30_state_t *s;
     char tag[20];
-    
-    i = (intptr_t) user_data;
-    snprintf(tag, sizeof(tag), "%c: Phase E", i);
-    printf("Phase E handler on channel %c\n", i);
+
+    ch = 'A';
+    s = (t30_state_t *) user_data;
+    snprintf(tag, sizeof(tag), "%c: Phase E", ch);
+    printf("Phase E handler on channel %c\n", ch);
     fax_log_final_transfer_statistics(s, tag);
     fax_log_tx_parameters(s, tag);
     fax_log_rx_parameters(s, tag);
-    //exit(0);
 }
 /*- End of function --------------------------------------------------------*/
 
 static int modem_call_control(t31_state_t *s, void *user_data, int op, const char *num)
 {
+    printf("\nModem control - %s", at_modem_control_to_str(op));
     switch (op)
     {
-    case AT_MODEM_CONTROL_ANSWER:
-        printf("\nModem control - Answering\n");
-        answered = TRUE;
-        break;
     case AT_MODEM_CONTROL_CALL:
-        printf("\nModem control - Dialing '%s'\n", num);
+        printf(" %s", num);
         t31_call_event(t31_state, AT_CALL_EVENT_CONNECTED);
         break;
+    case AT_MODEM_CONTROL_ANSWER:
+        answered = true;
+        break;
     case AT_MODEM_CONTROL_HANGUP:
-        printf("\nModem control - Hanging up\n");
-        done = TRUE;
+        done = true;
         break;
     case AT_MODEM_CONTROL_OFFHOOK:
-        printf("\nModem control - Going off hook\n");
         break;
     case AT_MODEM_CONTROL_DTR:
-        printf("\nModem control - DTR %d\n", (int) (intptr_t) num);
+        printf(" %d", (int) (intptr_t) num);
         break;
     case AT_MODEM_CONTROL_RTS:
-        printf("\nModem control - RTS %d\n", (int) (intptr_t) num);
+        printf(" %d", (int) (intptr_t) num);
         break;
     case AT_MODEM_CONTROL_CTS:
-        printf("\nModem control - CTS %d\n", (int) (intptr_t) num);
+        printf(" %d", (int) (intptr_t) num);
         break;
     case AT_MODEM_CONTROL_CAR:
-        printf("\nModem control - CAR %d\n", (int) (intptr_t) num);
+        printf(" %d", (int) (intptr_t) num);
         break;
     case AT_MODEM_CONTROL_RNG:
-        printf("\nModem control - RNG %d\n", (int) (intptr_t) num);
+        printf(" %d", (int) (intptr_t) num);
         break;
     case AT_MODEM_CONTROL_DSR:
-        printf("\nModem control - DSR %d\n", (int) (intptr_t) num);
+        printf(" %d", (int) (intptr_t) num);
         break;
-    default:
-        printf("\nModem control - operation %d\n", op);
+    case AT_MODEM_CONTROL_SETID:
+        printf(" %d", (int) (intptr_t) num);
+        break;
+    case AT_MODEM_CONTROL_RESTART:
+        printf(" %d", (int) (intptr_t) num);
+        break;
+    case AT_MODEM_CONTROL_DTE_TIMEOUT:
+        printf(" %d", (int) (intptr_t) num);
         break;
     }
     /*endswitch*/
+    printf("\n");
     return 0;
 }
 /*- End of function --------------------------------------------------------*/
 
-static int at_tx_handler(at_state_t *s, void *user_data, const uint8_t *buf, size_t len)
+static int at_tx_handler(void *user_data, const uint8_t *buf, size_t len)
 {
     size_t i;
 
@@ -392,17 +398,17 @@ static int at_tx_handler(at_state_t *s, void *user_data, const uint8_t *buf, siz
                     response_buf[response_buf_ptr] = '\0';
                     test_seq_ptr++;
                     if (fax_test_seq[test_seq_ptr].command == NULL  &&  fax_test_seq[test_seq_ptr].command == NULL)
-                        sequence_terminated = TRUE;
+                        sequence_terminated = true;
                     if (fax_test_seq[test_seq_ptr].command)
-                        kick = TRUE;
+                        kick = true;
                     break;
                 }
-                dled = FALSE;
+                dled = false;
             }
             else
             {
                 if (buf[i] == DLE)
-                    dled = TRUE;
+                    dled = true;
             }
         }
         i++;
@@ -431,13 +437,13 @@ static int at_tx_handler(at_state_t *s, void *user_data, const uint8_t *buf, siz
         printf("\nMatched\n");
         test_seq_ptr++;
         if (fax_test_seq[test_seq_ptr].command == NULL  &&  fax_test_seq[test_seq_ptr].command == NULL)
-            sequence_terminated = TRUE;
+            sequence_terminated = true;
         response_buf_ptr = 0;
         response_buf[response_buf_ptr] = '\0';
         if (fax_test_seq[test_seq_ptr].command)
-            kick = TRUE;
+            kick = true;
         else
-            dled = FALSE;
+            dled = false;
     }
     return 0;
 }
@@ -482,8 +488,6 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     int fast_send;
     int fast_send_tcf;
     int fast_blocks;
-    uint8_t fast_buf[1000];
-    uint8_t msg[1024];
     int msg_len;
     int t30_len;
     int t31_len;
@@ -491,14 +495,16 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     int without_pacing;
     int use_tep;
     int seq_no;
+    int i;
+    int k;
+    int outframes;
+    uint8_t fast_buf[1000];
+    uint8_t msg[1024];
     double tx_when;
     double rx_when;
     t30_state_t *t30;
     t38_core_state_t *t38_core;
     logging_state_t *logging;
-    int i;
-    int k;
-    int outframes;
     int16_t t30_amp[SAMPLES_PER_CHUNK];
     int16_t t31_amp[SAMPLES_PER_CHUNK];
     int16_t silence[SAMPLES_PER_CHUNK];
@@ -507,11 +513,11 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     SNDFILE *in_handle;
 
     /* Test the T.31 modem against the full FAX machine in spandsp */
-    
+
     /* Set up the test environment */
     t38_version = 1;
-    without_pacing = FALSE;
-    use_tep = FALSE;
+    without_pacing = false;
+    use_tep = false;
 
     wave_handle = NULL;
     if (log_audio)
@@ -551,7 +557,7 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     {
         if (t38_mode)
         {
-            if ((t38_state = t38_terminal_init(NULL, FALSE, t38_tx_packet_handler, t31_state)) == NULL)
+            if ((t38_state = t38_terminal_init(NULL, false, t38_tx_packet_handler, t31_state)) == NULL)
             {
                 fprintf(stderr, "Cannot start the T.38 channel\n");
                 exit(2);
@@ -560,7 +566,7 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
         }
         else
         {
-            fax_state = fax_init(NULL, FALSE);
+            fax_state = fax_init(NULL, false);
             t30 = fax_get_t30_state(fax_state);
         }
         t30_set_rx_file(t30, OUTPUT_FILE_NAME, -1);
@@ -571,7 +577,7 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     {
         if (t38_mode)
         {
-            if ((t38_state = t38_terminal_init(NULL, TRUE, t38_tx_packet_handler, t31_state)) == NULL)
+            if ((t38_state = t38_terminal_init(NULL, true, t38_tx_packet_handler, t31_state)) == NULL)
             {
                 fprintf(stderr, "Cannot start the T.38 channel\n");
                 exit(2);
@@ -580,7 +586,7 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
         }
         else
         {
-            fax_state = fax_init(NULL, TRUE);
+            fax_state = fax_init(NULL, true);
             t30 = fax_get_t30_state(fax_state);
         }
         t30_set_tx_file(t30, INPUT_FILE_NAME, -1, -1);
@@ -599,9 +605,9 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     t30_set_tx_ident(t30, "11111111");
     t30_set_supported_modems(t30, T30_SUPPORT_V27TER | T30_SUPPORT_V29 | T30_SUPPORT_V17);
     //t30_set_tx_nsf(t30, (const uint8_t *) "\x50\x00\x00\x00Spandsp\x00", 12);
-    t30_set_phase_b_handler(t30, phase_b_handler, (void *) 'A');
-    t30_set_phase_d_handler(t30, phase_d_handler, (void *) 'A');
-    t30_set_phase_e_handler(t30, phase_e_handler, (void *) 'A');
+    t30_set_phase_b_handler(t30, phase_b_handler, (void *) t30);
+    t30_set_phase_d_handler(t30, phase_d_handler, (void *) t30);
+    t30_set_phase_e_handler(t30, phase_e_handler, (void *) t30);
 
     if (t38_mode)
         logging = t38_terminal_get_logging_state(t38_state);
@@ -640,6 +646,10 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     span_log_set_level(logging, SPAN_LOG_DEBUG | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_SAMPLE_TIME);
     span_log_set_tag(logging, "T.31");
 
+    logging = at_get_logging_state(t31_get_at_state(t31_state));
+    span_log_set_level(logging, SPAN_LOG_DEBUG | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_SAMPLE_TIME);
+    span_log_set_tag(logging, "T.31");
+
     if (t38_mode)
     {
         t38_core = t31_get_t38_core_state(t31_state);
@@ -647,17 +657,14 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
         span_log_set_level(logging, SPAN_LOG_DEBUG | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_SAMPLE_TIME);
         span_log_set_tag(logging, "T.31");
 
-        span_log_set_level(&t31_state->at_state.logging, SPAN_LOG_DEBUG | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_SAMPLE_TIME);
-        span_log_set_tag(&t31_state->at_state.logging, "T.31");
-
-        t31_set_mode(t31_state, TRUE);
+        t31_set_mode(t31_state, true);
         t38_set_t38_version(t38_core, t38_version);
     }
 
-    fast_send = FALSE;
-    fast_send_tcf = TRUE;
+    fast_send = false;
+    fast_send_tcf = true;
     fast_blocks = 0;
-    kick = TRUE;
+    kick = true;
 #if defined(ENABLE_GUI)
     if (use_gui)
         start_media_monitor();
@@ -666,7 +673,7 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     {
         if (countdown)
         {
-            /* Deal with call setup, through the AT interface. */ 
+            /* Deal with call setup, through the AT interface. */
             if (answered)
             {
                 countdown = 0;
@@ -682,7 +689,7 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
         if (kick)
         {
             /* Work through the script */
-            kick = FALSE;
+            kick = false;
             if (fax_test_seq[test_seq_ptr].command > (const char *) 2)
             {
                 if (fax_test_seq[test_seq_ptr].command[0])
@@ -696,15 +703,15 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
                 if (fax_test_seq[test_seq_ptr].command == (const char *) 2)
                 {
                     printf("Fast send TCF\n");
-                    fast_send = TRUE;
-                    fast_send_tcf = TRUE;
+                    fast_send = true;
+                    fast_send_tcf = true;
                     fast_blocks = 100;
                 }
                 else
                 {
                     printf("Fast send image\n");
-                    fast_send = TRUE;
-                    fast_send_tcf = FALSE;
+                    fast_send = true;
+                    fast_send_tcf = false;
                     fast_blocks = 100;
                 }
             }
@@ -754,7 +761,7 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
             }
             t31_at_rx(t31_state, (char *) fast_buf, 36);
             if (--fast_blocks == 0)
-                fast_send = FALSE;
+                fast_send = false;
         }
 
         if (t38_mode)
@@ -842,11 +849,16 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
         t38_core = t31_get_t38_core_state(t31_state);
         span_log_bump_samples(t38_core_get_logging_state(t38_core), SAMPLES_PER_CHUNK);
         span_log_bump_samples(t31_get_logging_state(t31_state), SAMPLES_PER_CHUNK);
-        span_log_bump_samples(&t31_state->at_state.logging, SAMPLES_PER_CHUNK);
+        span_log_bump_samples(at_get_logging_state(t31_get_at_state(t31_state)), SAMPLES_PER_CHUNK);
     }
 
+    g1050_free(path_a_to_b);
+    g1050_free(path_b_to_a);
     if (t38_mode)
-        t38_terminal_release(t38_state);
+        t38_terminal_free(t38_state);
+    else
+        fax_free(fax_state);
+    t31_free(t31_state);
 
     if (decode_test_file)
     {
@@ -868,7 +880,7 @@ static int t30_tests(int t38_mode, int use_gui, int log_audio, int test_sending,
     if (!done  ||  !sequence_terminated)
     {
         printf("Tests failed\n");
-        return 2;
+        return -1;
     }
 
     return 0;
@@ -886,10 +898,10 @@ int main(int argc, char *argv[])
     int opt;
 
     decode_test_file = NULL;
-    log_audio = FALSE;
-    test_sending = FALSE;
-    t38_mode = FALSE;
-    use_gui = FALSE;
+    log_audio = false;
+    test_sending = false;
+    t38_mode = false;
+    use_gui = false;
     g1050_model_no = 0;
     g1050_speed_pattern_no = 1;
     while ((opt = getopt(argc, argv, "d:glM:rS:st")) != -1)
@@ -901,29 +913,29 @@ int main(int argc, char *argv[])
             break;
         case 'g':
 #if defined(ENABLE_GUI)
-            use_gui = TRUE;
+            use_gui = true;
 #else
             fprintf(stderr, "Graphical monitoring not available\n");
             exit(2);
 #endif
             break;
         case 'l':
-            log_audio = TRUE;
+            log_audio = true;
             break;
         case 'M':
             g1050_model_no = optarg[0] - 'A' + 1;
             break;
         case 'r':
-            test_sending = FALSE;
+            test_sending = false;
             break;
         case 'S':
             g1050_speed_pattern_no = atoi(optarg);
             break;
         case 's':
-            test_sending = TRUE;
+            test_sending = true;
             break;
         case 't':
-            t38_mode = TRUE;
+            t38_mode = true;
             break;
         default:
             //usage();
@@ -932,9 +944,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    t30_tests(t38_mode, use_gui, log_audio, test_sending, g1050_model_no, g1050_speed_pattern_no);
+    if (t30_tests(t38_mode, use_gui, log_audio, test_sending, g1050_model_no, g1050_speed_pattern_no) < 0)
+        return 2;
     printf("Tests passed\n");
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

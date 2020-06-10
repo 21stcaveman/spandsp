@@ -19,7 +19,11 @@
 extern "C" {
 #endif
 
-typedef __int8		        __int8_t;
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+#include <stdint.h>
+#else
+
+typedef __int8			        __int8_t;
 typedef __int16		        __int16_t;
 typedef __int32		        __int32_t;
 typedef __int64		        __int64_t;
@@ -33,7 +37,8 @@ typedef __int16		        int16_t;
 typedef __int32		        int32_t;
 typedef __int64		        int64_t;
 
-#if !defined(INFINITY)
+#endif
+#if !defined(INFINITY)  &&  _MSC_VER < 1800
 #define INFINITY 0x7FFFFFFF
 #endif
 
@@ -43,12 +48,15 @@ typedef __int64		        int64_t;
 #if !defined(UINT16_MAX)
 #define UINT16_MAX  0xFFFF
 #endif
+#if !defined(UINT32_MAX)
+#define UINT32_MAX	0xFFFFFFFF
+#endif
 
 #if !defined(INT16_MAX)
-#define INT16_MAX   0x7FFF 
+#define INT16_MAX   0x7FFF
 #endif
 #if !defined(INT16_MIN)
-#define INT16_MIN   (-INT16_MAX - 1) 
+#define INT16_MIN   (-INT16_MAX - 1)
 #endif
 
 #if !defined(INT32_MAX)

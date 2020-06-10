@@ -33,9 +33,6 @@
 ???.
 */
 
-/* Enable the following definition to enable direct probing into the FAX structures */
-//#define WITH_SPANDSP_INTERNALS
-
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -46,10 +43,6 @@
 #include <string.h>
 #include <time.h>
 #include <sndfile.h>
-
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
 
 #include "spandsp.h"
 #include "spandsp-sim.h"
@@ -71,7 +64,7 @@ int main(int argc, char *argv[])
         exit(2);
     }
 
-    r2_mf_tx_init(&gen, FALSE);
+    r2_mf_tx_init(&gen, false);
     for (digit = 0;  digits[digit];  digit++)
     {
         r2_mf_tx_put(&gen, digits[digit]);
@@ -86,7 +79,7 @@ int main(int argc, char *argv[])
             sf_writef_short(outhandle, amp, len);
     }
 
-    r2_mf_tx_init(&gen, TRUE);
+    r2_mf_tx_init(&gen, true);
     for (digit = 0;  digits[digit];  digit++)
     {
         r2_mf_tx_put(&gen, digits[digit]);
@@ -107,7 +100,7 @@ int main(int argc, char *argv[])
         exit (2);
     }
 
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

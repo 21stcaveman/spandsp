@@ -43,10 +43,6 @@
 #include <memory.h>
 #include <sndfile.h>
 
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
-
 #include "spandsp.h"
 #include "spandsp-sim.h"
 
@@ -87,17 +83,17 @@ static int dial_pulses = 0;
 static int rx_handler_callbacks = 0;
 static int tx_handler_callbacks = 0;
 
-static int use_gui = FALSE;
+static bool use_gui = false;
 
 static void plot_frequency_response(void)
 {
     FILE *gnucmd;
-    
+
     if ((gnucmd = popen("gnuplot", "w")) == NULL)
     {
         exit(2);
     }
-    
+
     fprintf(gnucmd, "set autoscale\n");
     fprintf(gnucmd, "unset log\n");
     fprintf(gnucmd, "unset label\n");
@@ -179,7 +175,7 @@ static void tx_handler(void *user_data, int what, int level, int duration)
 #endif
         {0, 0}
     };
-    
+
     s = (sig_tone_tx_state_t *) user_data;
     tx_handler_callbacks++;
     //printf("What - %d, duration - %d\n", what, duration);
@@ -272,7 +268,7 @@ static void map_frequency_response(sig_tone_rx_state_t *s, template_t template[]
     double gain;
     int template_entry;
     FILE *file;
-    
+
     /* Things like noise don't highlight the frequency response of the high Q notch
        very well. We use a slowly swept frequency to check it. */
     printf("Frequency response test\n");
@@ -526,13 +522,13 @@ int main(int argc, char *argv[])
     template_t template[10];
     int opt;
 
-    use_gui = FALSE;
+    use_gui = false;
     while ((opt = getopt(argc, argv, "g")) != -1)
     {
         switch (opt)
         {
         case 'g':
-            use_gui = TRUE;
+            use_gui = true;
             break;
         default:
             //usage();
@@ -652,11 +648,13 @@ int main(int argc, char *argv[])
         speech_immunity_tests(&rx_state);
         level_and_ratio_tests(&rx_state, fc);
         sequence_tests(&tx_state, &rx_state, munge);
+        if (munge)
+            codec_munge_free(munge);
     }
     /*endfor*/
-    
+
     printf("Tests completed.\n");
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

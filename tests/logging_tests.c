@@ -40,27 +40,22 @@
 #include <memory.h>
 #include <time.h>
 
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
-
 #include "spandsp.h"
 
-static int tests_failed = FALSE;
+static bool tests_failed = false;
 
 static int msg_step = 0;
 static int msg2_step = 0;
-static int error_step = 0;
-static int msg_done = FALSE;
-static int msg2_done = FALSE;
-static int error_done = FALSE;
+static bool msg_done = false;
+static bool msg2_done = false;
 
-static void message_handler(int level, const char *text)
+static void message_handler(void *user_data, int level, const char *text)
 {
     const char *ref[] =
     {
         "TAG Log with tag 1 2 3\n",
         "Log with protocol 1 2 3\n",
+        "ERROR Log with severity log 1 2 3\n",
         "FLOW NewTag Log with new tag 1 2 3\n",
         "FLOW Protocol NewTag Log with protocol 1 2 3\n",
         "FLOW Protocol NewTag Buf 00 01 02 03 04 05 06 07 08 09\n",
@@ -78,101 +73,83 @@ static void message_handler(int level, const char *text)
         ""
     };
 
+    if (ref[msg_step][0] == '\0')
+        return;
     if (strcmp(ref[msg_step], text))
     {
         printf(">>>: %s", ref[msg_step]);
-        tests_failed = TRUE;
+        tests_failed = true;
     }
     if (ref[++msg_step][0] == '\0')
-        msg_done = TRUE;
+        msg_done = true;
     printf("MSG: %s", text);
 }
 /*- End of function --------------------------------------------------------*/
 
-static void message_handler2(int level, const char *text)
+static void message_handler2(void *user_data, int level, const char *text)
 {
     /* TODO: This doesn't check if the date/time field makes sense */
     if (strcmp(" FLOW Protocol NewTag Date/time tagged log 1 2 3\n", text + 23))
     {
         printf(">>>: %s", text + 23);
-        tests_failed = TRUE;
+        tests_failed = true;
     }
     if (++msg2_step == 10)
-        msg2_done = TRUE;
+        msg2_done = true;
     printf("MSG: %s", text);
-}
-/*- End of function --------------------------------------------------------*/
-
-static void error_handler(const char *text)
-{
-    const char *ref[] =
-    {
-        "ERROR Log with severity log 1 2 3\n",
-        ""
-    };
-    
-    if (strcmp(ref[error_step], text))
-    {
-        printf(">>>: %s", ref[error_step]);
-        tests_failed = TRUE;
-    }
-    if (ref[++error_step][0] == '\0')
-        error_done = TRUE;
-    printf("ERR: %s", text);
 }
 /*- End of function --------------------------------------------------------*/
 
 int main(int argc, char *argv[])
 {
-    logging_state_t log;
+    logging_state_t *log;
     int i;
     uint8_t buf[1000];
     struct timespec delay;
 
     /* Set up a logger */
-    if (span_log_init(&log, 123, "TAG") == NULL)
+    if ((log = span_log_init(NULL, 123, "TAG")) == NULL)
     {
         fprintf(stderr, "Failed to initialise log.\n");
         exit(2);
     }
     /* Try it */
-    span_log_set_level(&log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW);
-    if (span_log(&log, SPAN_LOG_FLOW, "Logging to fprintf, as simple as %d %d %d\n", 1, 2, 3))
+    span_log_set_level(log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW);
+    if (span_log(log, SPAN_LOG_FLOW, "Logging to fprintf, as simple as %d %d %d\n", 1, 2, 3))
         fprintf(stderr, "Logged.\n");
     else
         fprintf(stderr, "Not logged.\n");
 
     /* Now set a custom log handler */
-    span_log_set_message_handler(&log, &message_handler);
-    span_log_set_error_handler(&log, &error_handler);
-    span_log_set_sample_rate(&log, 44100);
+    span_log_set_message_handler(log, &message_handler, NULL);
+    span_log_set_sample_rate(log, 44100);
 
     /* Try the different logging elements */
-    span_log_set_level(&log, SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW);
-    if (span_log(&log, SPAN_LOG_FLOW, "Log with tag %d %d %d\n", 1, 2, 3))
+    span_log_set_level(log, SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW);
+    if (span_log(log, SPAN_LOG_FLOW, "Log with tag %d %d %d\n", 1, 2, 3))
         fprintf(stderr, "Logged.\n");
     else
         fprintf(stderr, "Not logged.\n");
-    span_log_set_level(&log, SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_FLOW);
-    if (span_log(&log, SPAN_LOG_FLOW, "Log with protocol %d %d %d\n", 1, 2, 3))
+    span_log_set_level(log, SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_FLOW);
+    if (span_log(log, SPAN_LOG_FLOW, "Log with protocol %d %d %d\n", 1, 2, 3))
         fprintf(stderr, "Logged.\n");
     else
         fprintf(stderr, "Not logged.\n");
-    span_log_set_level(&log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_FLOW);
-    if (span_log(&log, SPAN_LOG_ERROR, "Log with severity log %d %d %d\n", 1, 2, 3))
-        fprintf(stderr, "Logged.\n");
-    else
-        fprintf(stderr, "Not logged.\n");
-
-    span_log_set_level(&log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW);
-    span_log_set_tag(&log, "NewTag");
-    if (span_log(&log, SPAN_LOG_FLOW, "Log with new tag %d %d %d\n", 1, 2, 3))
+    span_log_set_level(log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_FLOW);
+    if (span_log(log, SPAN_LOG_ERROR, "Log with severity log %d %d %d\n", 1, 2, 3))
         fprintf(stderr, "Logged.\n");
     else
         fprintf(stderr, "Not logged.\n");
 
-    span_log_set_protocol(&log, "Protocol");
-    if (span_log(&log, SPAN_LOG_FLOW, "Log with protocol %d %d %d\n", 1, 2, 3))
+    span_log_set_level(log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW);
+    span_log_set_tag(log, "NewTag");
+    if (span_log(log, SPAN_LOG_FLOW, "Log with new tag %d %d %d\n", 1, 2, 3))
+        fprintf(stderr, "Logged.\n");
+    else
+        fprintf(stderr, "Not logged.\n");
+
+    span_log_set_protocol(log, "Protocol");
+    if (span_log(log, SPAN_LOG_FLOW, "Log with protocol %d %d %d\n", 1, 2, 3))
         fprintf(stderr, "Logged.\n");
     else
         fprintf(stderr, "Not logged.\n");
@@ -180,11 +157,11 @@ int main(int argc, char *argv[])
     /* Test logging of buffer contents */
     for (i = 0;  i < 1000;  i++)
         buf[i] = i;
-    if (span_log_buf(&log, SPAN_LOG_FLOW, "Buf", buf, 10))
+    if (span_log_buf(log, SPAN_LOG_FLOW, "Buf", buf, 10))
         fprintf(stderr, "Logged.\n");
     else
         fprintf(stderr, "Not logged.\n");
-    if (span_log_buf(&log, SPAN_LOG_FLOW, "Buf", buf, 1000))
+    if (span_log_buf(log, SPAN_LOG_FLOW, "Buf", buf, 1000))
         fprintf(stderr, "Logged.\n");
     else
         fprintf(stderr, "Not logged.\n");
@@ -192,39 +169,41 @@ int main(int argc, char *argv[])
     /* Test the correct severities will be logged */
     for (i = 0;  i < 10;  i++)
     {
-        if (!span_log_test(&log, i))
+        if (!span_log_test(log, i))
         {
             if (i != 6)
-                tests_failed = TRUE;
+                tests_failed = true;
             break;
         }
     }
 
     /* Check timestamping by samples */
-    span_log_set_level(&log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW | SPAN_LOG_SHOW_SAMPLE_TIME);
+    span_log_set_level(log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW | SPAN_LOG_SHOW_SAMPLE_TIME);
     for (i = 0;  i < 10;  i++)
     {
-        span_log(&log, SPAN_LOG_FLOW, "Time tagged log %d %d %d\n", 1, 2, 3);
-        span_log_bump_samples(&log, 441*2);
+        span_log(log, SPAN_LOG_FLOW, "Time tagged log %d %d %d\n", 1, 2, 3);
+        span_log_bump_samples(log, 441*2);
     }
 
     /* Check timestamping by current date and time */
-    span_log_set_message_handler(&log, &message_handler2);
-    span_log_set_level(&log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW | SPAN_LOG_SHOW_DATE);
+    span_log_set_message_handler(log, &message_handler2, NULL);
+    span_log_set_level(log, SPAN_LOG_SHOW_SEVERITY | SPAN_LOG_SHOW_PROTOCOL | SPAN_LOG_SHOW_TAG | SPAN_LOG_FLOW | SPAN_LOG_SHOW_DATE);
     for (i = 0;  i < 10;  i++)
     {
-        span_log(&log, SPAN_LOG_FLOW, "Date/time tagged log %d %d %d\n", 1, 2, 3);
+        span_log(log, SPAN_LOG_FLOW, "Date/time tagged log %d %d %d\n", 1, 2, 3);
         delay.tv_sec = 0;
         delay.tv_nsec = 20000000;
         nanosleep(&delay, NULL);
     }
-    if (tests_failed  ||  !msg_done  ||  !error_done)
+    if (tests_failed  ||  !msg_done)
     {
-        printf("Tests failed - %d %d %d.\n", tests_failed, msg_done, error_done);
+        printf("Tests failed - %d %d.\n", tests_failed, msg_done);
         return 2;
     }
 
-    span_log_set_message_handler(&log, &message_handler);
+    span_log_set_message_handler(log, &message_handler, NULL);
+
+    span_log_free(log);
 
     printf("Tests passed.\n");
     return 0;

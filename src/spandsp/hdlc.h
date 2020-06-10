@@ -84,8 +84,8 @@ extern "C"
 /*! Initialise an HDLC receiver context.
     \brief Initialise an HDLC receiver context.
     \param s A pointer to an HDLC receiver context.
-    \param crc32 TRUE to use ITU CRC32. FALSE to use ITU CRC16.
-    \param report_bad_frames TRUE to request the reporting of bad frames.
+    \param crc32 True to use ITU CRC32. False to use ITU CRC16.
+    \param report_bad_frames True to request the reporting of bad frames.
     \param framing_ok_threshold The number of back-to-back flags needed to
            start the framing OK condition. This may be used where a series of
            flag octets is used as a preamble, such as in the T.30 protocol.
@@ -94,8 +94,8 @@ extern "C"
     \return A pointer to the HDLC receiver context.
 */
 SPAN_DECLARE(hdlc_rx_state_t *) hdlc_rx_init(hdlc_rx_state_t *s,
-                                             int crc32,
-                                             int report_bad_frames,
+                                             bool crc32,
+                                             bool report_bad_frames,
                                              int framing_ok_threshold,
                                              hdlc_frame_handler_t handler,
                                              void *user_data);
@@ -160,35 +160,35 @@ SPAN_DECLARE(int) hdlc_rx_get_stats(hdlc_rx_state_t *s,
     \param s A pointer to an HDLC receiver context.
     \param new_bit The bit.
 */
-SPAN_DECLARE_NONSTD(void) hdlc_rx_put_bit(hdlc_rx_state_t *s, int new_bit);
+SPAN_DECLARE(void) hdlc_rx_put_bit(hdlc_rx_state_t *s, int new_bit);
 
 /*! \brief Put a byte of data to an HDLC receiver.
     \param s A pointer to an HDLC receiver context.
     \param new_byte The byte of data.
 */
-SPAN_DECLARE_NONSTD(void) hdlc_rx_put_byte(hdlc_rx_state_t *s, int new_byte);
+SPAN_DECLARE(void) hdlc_rx_put_byte(hdlc_rx_state_t *s, int new_byte);
 
 /*! \brief Put a series of bytes of data to an HDLC receiver.
     \param s A pointer to an HDLC receiver context.
     \param buf The buffer of data.
     \param len The length of the data in the buffer.
 */
-SPAN_DECLARE_NONSTD(void) hdlc_rx_put(hdlc_rx_state_t *s, const uint8_t buf[], int len);
+SPAN_DECLARE(void) hdlc_rx_put(hdlc_rx_state_t *s, const uint8_t buf[], int len);
 
 /*! Initialise an HDLC transmitter context.
     \brief Initialise an HDLC transmitter context.
     \param s A pointer to an HDLC transmitter context.
-    \param crc32 TRUE to use ITU CRC32. FALSE to use ITU CRC16.
+    \param crc32 True to use ITU CRC32. False to use ITU CRC16.
     \param inter_frame_flags The minimum flag octets to insert between frames (usually one).
-    \param progressive TRUE if frame creation works in progressive mode.
+    \param progressive True if frame creation works in progressive mode.
     \param handler The callback function called when the HDLC transmitter underflows.
     \param user_data An opaque parameter for the callback routine.
     \return A pointer to the HDLC transmitter context.
 */
 SPAN_DECLARE(hdlc_tx_state_t *) hdlc_tx_init(hdlc_tx_state_t *s,
-                                             int crc32,
+                                             bool crc32,
                                              int inter_frame_flags,
-                                             int progressive,
+                                             bool progressive,
                                              hdlc_underflow_handler_t handler,
                                              void *user_data);
 
@@ -250,13 +250,13 @@ SPAN_DECLARE(int) hdlc_tx_abort(hdlc_tx_state_t *s);
     \param s A pointer to an HDLC transmitter context.
     \return The next bit for transmission.
 */
-SPAN_DECLARE_NONSTD(int) hdlc_tx_get_bit(hdlc_tx_state_t *s);
+SPAN_DECLARE(int) hdlc_tx_get_bit(hdlc_tx_state_t *s);
 
 /*! \brief Get the next byte for transmission.
     \param s A pointer to an HDLC transmitter context.
     \return The next byte for transmission.
 */
-SPAN_DECLARE_NONSTD(int) hdlc_tx_get_byte(hdlc_tx_state_t *s);
+SPAN_DECLARE(int) hdlc_tx_get_byte(hdlc_tx_state_t *s);
 
 /*! \brief Get the next sequence of bytes for transmission.
     \param s A pointer to an HDLC transmitter context.
@@ -264,7 +264,7 @@ SPAN_DECLARE_NONSTD(int) hdlc_tx_get_byte(hdlc_tx_state_t *s);
     \param max_len The number of bytes to get.
     \return The number of bytes actually got.
 */
-SPAN_DECLARE_NONSTD(int) hdlc_tx_get(hdlc_tx_state_t *s, uint8_t buf[], size_t max_len);
+SPAN_DECLARE(int) hdlc_tx_get(hdlc_tx_state_t *s, uint8_t buf[], size_t max_len);
 
 #if defined(__cplusplus)
 }

@@ -19,45 +19,40 @@
 AM_CFLAGS = $(COMP_VENDOR_CFLAGS)
 AM_LDFLAGS = $(COMP_VENDOR_LDFLAGS)
 
-MAINTAINERCLEANFILES = Makefile.in
-
 DISTCLEANFILES = $(srcdir)/at_interpreter_dictionary.h \
+                 $(srcdir)/cielab_luts.h \
                  $(srcdir)/math_fixed_tables.h \
-                 $(srcdir)/v17_v32bis_rx_fixed_rrc.h \
-                 $(srcdir)/v17_v32bis_rx_floating_rrc.h \
-                 $(srcdir)/v17_v32bis_tx_fixed_rrc.h \
-                 $(srcdir)/v17_v32bis_tx_floating_rrc.h \
-                 $(srcdir)/v22bis_rx_1200_fixed_rrc.h \
-                 $(srcdir)/v22bis_rx_2400_fixed_rrc.h \
-                 $(srcdir)/v22bis_rx_1200_floating_rrc.h \
-                 $(srcdir)/v22bis_rx_2400_floating_rrc.h \
-                 $(srcdir)/v22bis_tx_fixed_rrc.h \
-                 $(srcdir)/v22bis_tx_floating_rrc.h \
-                 $(srcdir)/v27ter_rx_2400_fixed_rrc.h \
-                 $(srcdir)/v27ter_rx_4800_fixed_rrc.h \
-                 $(srcdir)/v27ter_rx_2400_floating_rrc.h \
-                 $(srcdir)/v27ter_rx_4800_floating_rrc.h \
-                 $(srcdir)/v27ter_tx_2400_fixed_rrc.h \
-                 $(srcdir)/v27ter_tx_4800_fixed_rrc.h \
-                 $(srcdir)/v27ter_tx_2400_floating_rrc.h \
-                 $(srcdir)/v27ter_tx_4800_floating_rrc.h \
-                 $(srcdir)/v29rx_fixed_rrc.h \
-                 $(srcdir)/v29rx_floating_rrc.h \
-                 $(srcdir)/v29tx_fixed_rrc.h \
-                 $(srcdir)/v29tx_floating_rrc.h
+                 $(srcdir)/v17_v32bis_rx_rrc.h \
+                 $(srcdir)/v17_v32bis_tx_rrc.h \
+                 $(srcdir)/v22bis_rx_1200_rrc.h \
+                 $(srcdir)/v22bis_rx_2400_rrc.h \
+                 $(srcdir)/v22bis_tx_rrc.h \
+                 $(srcdir)/v27ter_rx_2400_rrc.h \
+                 $(srcdir)/v27ter_rx_4800_rrc.h \
+                 $(srcdir)/v27ter_tx_2400_rrc.h \
+                 $(srcdir)/v27ter_tx_4800_rrc.h \
+                 $(srcdir)/v29rx_rrc.h \
+                 $(srcdir)/v29tx_rrc.h
+
+CLEANFILES = ${DISTCLEANFILES}
+MOSTLYCLEANFILES = ${DISTCLEANFILES}
+MAINTAINERCLEANFILES = ${DISTCLEANFILES}
 
 EXTRA_DIST = floating_fudge.h \
-             libspandsp.dsp \
              libspandsp.2005.sln \
              libspandsp.2008.sln \
              libspandsp.2005.vcproj \
              libspandsp.2008.vcproj \
+             libspandsp.2010.vcproj \
+             libspandsp.2012.vcxproj \
              libtiff.2005.vcproj \
              libtiff.2008.vcproj \
              filter_tools.c \
              make_at_dictionary.c \
+             make_cielab_luts.c \
              make_math_fixed_tables.c \
              make_modem_filter.c \
+             make_t43_gray_code_tables.c \
              msvc/config.h \
              msvc/Download_TIFF.2005.vcproj \
              msvc/Download_TIFF.2008.vcproj \
@@ -79,6 +74,10 @@ EXTRA_DIST = floating_fudge.h \
              msvc/vc8proj.head \
              msvc/vc9proj.foot \
              msvc/vc9proj.head \
+             msvc/vc10proj.foot \
+             msvc/vc10proj.head \
+             msvc/vc12proj.foot \
+             msvc/vc12proj.head \
              msvc/sys/time.h \
              spandsp/private/README \
              spandsp/version.h.in
@@ -87,8 +86,19 @@ AM_CPPFLAGS = -I$(top_builddir)
 
 lib_LTLIBRARIES = libspandsp.la
 
+if COND_V32BIS
+V32BIS_SOURCES = v32bis.c
+endif
+
+if COND_V34
+V34_SOURCES = v34rx.c \
+              v34tx.c \
+              v34_logging.c
+endif
+
 libspandsp_la_SOURCES = ademco_contactid.c \
                         adsi.c \
+                        alloc.c \
                         async.c \
                         at_interpreter.c \
                         awgn.c \
@@ -100,6 +110,7 @@ libspandsp_la_SOURCES = ademco_contactid.c \
                         complex_vector_float.c \
                         complex_vector_int.c \
                         crc.c \
+                        data_modems.c \
                         dds_float.c \
                         dds_int.c \
                         dtmf.c \
@@ -141,8 +152,6 @@ libspandsp_la_SOURCES = ademco_contactid.c \
                         super_tone_rx.c \
                         super_tone_tx.c \
                         swept_tone.c \
-                        t4_rx.c \
-                        t4_tx.c \
                         t30.c \
                         t30_api.c \
                         t30_logging.c \
@@ -152,6 +161,15 @@ libspandsp_la_SOURCES = ademco_contactid.c \
                         t38_gateway.c \
                         t38_non_ecm_buffer.c \
                         t38_terminal.c \
+                        t4_t6_decode.c \
+                        t4_t6_encode.c \
+                        t4_rx.c \
+                        t4_tx.c \
+                        t42.c \
+                        t43.c \
+                        t81_t82_arith_coding.c \
+                        t85_decode.c \
+                        t85_encode.c \
                         testcpuid.c \
                         time_scale.c \
                         timezone.c \
@@ -170,12 +188,15 @@ libspandsp_la_SOURCES = ademco_contactid.c \
                         v42bis.c \
                         v8.c \
                         vector_float.c \
-                        vector_int.c
+                        vector_int.c \
+                        $(V32BIS_SOURCES) \
+                        $(V34_SOURCES)
 
 libspandsp_la_LDFLAGS = -version-info @SPANDSP_LT_CURRENT@:@SPANDSP_LT_REVISION@:@SPANDSP_LT_AGE@ $(COMP_VENDOR_LDFLAGS)
 
 nobase_include_HEADERS = spandsp/ademco_contactid.h \
                          spandsp/adsi.h \
+                         spandsp/alloc.h \
                          spandsp/async.h \
                          spandsp/arctan2.h \
                          spandsp/at_interpreter.h \
@@ -190,6 +211,7 @@ nobase_include_HEADERS = spandsp/ademco_contactid.h \
                          spandsp/complex_filters.h \
                          spandsp/complex_vector_float.h \
                          spandsp/complex_vector_int.h \
+                         spandsp/data_modems.h \
                          spandsp/dc_restore.h \
                          spandsp/dds.h \
                          spandsp/dtmf.h \
@@ -240,6 +262,10 @@ nobase_include_HEADERS = spandsp/ademco_contactid.h \
                          spandsp/t4_tx.h \
                          spandsp/t4_t6_decode.h \
                          spandsp/t4_t6_encode.h \
+                         spandsp/t42.h \
+                         spandsp/t43.h \
+                         spandsp/t81_t82_arith_coding.h \
+                         spandsp/t85.h \
                          spandsp/telephony.h \
                          spandsp/time_scale.h \
                          spandsp/timezone.h \
@@ -268,6 +294,7 @@ nobase_include_HEADERS = spandsp/ademco_contactid.h \
                          spandsp/private/bell_r2_mf.h \
                          spandsp/private/bert.h \
                          spandsp/private/bitstream.h \
+                         spandsp/private/data_modems.h \
                          spandsp/private/dtmf.h \
                          spandsp/private/echo.h \
                          spandsp/private/fax.h \
@@ -286,6 +313,9 @@ nobase_include_HEADERS = spandsp/ademco_contactid.h \
                          spandsp/private/modem_echo.h \
                          spandsp/private/noise.h \
                          spandsp/private/oki_adpcm.h \
+                         spandsp/private/playout.h \
+                         spandsp/private/plc.h \
+                         spandsp/private/power_meter.h \
                          spandsp/private/queue.h \
                          spandsp/private/schedule.h \
                          spandsp/private/sig_tone.h \
@@ -304,6 +334,10 @@ nobase_include_HEADERS = spandsp/ademco_contactid.h \
                          spandsp/private/t4_tx.h \
                          spandsp/private/t4_t6_decode.h \
                          spandsp/private/t4_t6_encode.h \
+                         spandsp/private/t42.h \
+                         spandsp/private/t43.h \
+                         spandsp/private/t81_t82_arith_coding.h \
+                         spandsp/private/t85.h \
                          spandsp/private/time_scale.h \
                          spandsp/private/timezone.h \
                          spandsp/private/tone_detect.h \
@@ -331,18 +365,25 @@ noinst_HEADERS = cielab_luts.h \
                  mmx_sse_decs.h \
                  t30_local.h \
                  t4_t6_decode_states.h \
+                 t42_t43_local.h \
                  v17_v32bis_rx_constellation_maps.h \
                  v17_v32bis_tx_constellation_maps.h \
                  v29tx_constellation_maps.h
 
 make_at_dictionary$(EXEEXT): $(top_srcdir)/src/make_at_dictionary.c
-	$(CC_FOR_BUILD) -o make_at_dictionary$(EXEEXT) $(top_srcdir)/src/make_at_dictionary.c  -DHAVE_CONFIG_H -I$(top_builddir)/src
+	$(CC_FOR_BUILD) -o make_at_dictionary$(EXEEXT) $(top_srcdir)/src/make_at_dictionary.c -DHAVE_CONFIG_H -I$(top_builddir)/src
+
+make_cielab_luts$(EXEEXT): $(top_srcdir)/src/make_cielab_luts.c
+	$(CC_FOR_BUILD) -o make_cielab_luts$(EXEEXT) $(top_srcdir)/src/make_cielab_luts.c -DHAVE_CONFIG_H -I$(top_builddir)/src -lm
 
 make_math_fixed_tables$(EXEEXT): $(top_srcdir)/src/make_math_fixed_tables.c
-	$(CC_FOR_BUILD) -o make_math_fixed_tables$(EXEEXT) $(top_srcdir)/src/make_math_fixed_tables.c  -DHAVE_CONFIG_H -I$(top_builddir)/src -lm
+	$(CC_FOR_BUILD) -o make_math_fixed_tables$(EXEEXT) $(top_srcdir)/src/make_math_fixed_tables.c -DHAVE_CONFIG_H -I$(top_builddir)/src -lm
 
 make_modem_filter$(EXEEXT): $(top_srcdir)/src/make_modem_filter.c $(top_srcdir)/src/filter_tools.c
 	$(CC_FOR_BUILD) -o make_modem_filter$(EXEEXT) $(top_srcdir)/src/make_modem_filter.c $(top_srcdir)/src/filter_tools.c -DHAVE_CONFIG_H -I$(top_builddir)/src -lm
+
+make_t43_gray_code_tables$(EXEEXT): $(top_srcdir)/src/make_t43_gray_code_tables.c
+	$(CC_FOR_BUILD) -o make_t43_gray_code_tables$(EXEEXT) $(top_srcdir)/src/make_t43_gray_code_tables.c -DHAVE_CONFIG_H -I$(top_builddir)/src -lm
 
 # We need to run make_at_dictionary, so it generates the
 # at_interpreter_dictionary.h file
@@ -365,165 +406,114 @@ t4_rx.$(OBJEXT): spandsp/version.h
 
 t4_rx.lo: spandsp/version.h
 
-V17_V32BIS_RX_INCL = v17_v32bis_rx_fixed_rrc.h \
-                     v17_v32bis_rx_floating_rrc.h
+t42.$(OBJEXT): cielab_luts.h
+
+t42.lo: cielab_luts.h
+
+cielab_luts.h: make_cielab_luts$(EXEEXT)
+	./make_cielab_luts$(EXEEXT) >cielab_luts.h
+
+t43.lo: t43_gray_code_tables.h
+
+t43_gray_code_tables.h: make_t43_gray_code_tables$(EXEEXT)
+	./make_t43_gray_code_tables$(EXEEXT) >t43_gray_code_tables.h
+
+V17_V32BIS_RX_INCL = v17_v32bis_rx_rrc.h
 
 v17rx.$(OBJEXT): ${V17_V32BIS_RX_INCL}
 
 v17rx.lo: ${V17_V32BIS_RX_INCL}
 
-v17_v32bis_rx_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.17 -i -r >v17_v32bis_rx_fixed_rrc.h
+v17_v32bis_rx_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.17 -r >v17_v32bis_rx_rrc.h
 
-v17_v32bis_rx_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.17 -r >v17_v32bis_rx_floating_rrc.h
-
-V17_V32BIS_TX_INCL = v17_v32bis_tx_fixed_rrc.h \
-                     v17_v32bis_tx_floating_rrc.h
+V17_V32BIS_TX_INCL = v17_v32bis_tx_rrc.h
 
 v17tx.$(OBJEXT): ${V17_V32BIS_TX_INCL}
 
 v17tx.lo: ${V17_V32BIS_TX_INCL}
 
-v17_v32bis_tx_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.17 -i -t >v17_v32bis_tx_fixed_rrc.h
+v17_v32bis_tx_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.17 -t >v17_v32bis_tx_rrc.h
 
-v17_v32bis_tx_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.17 -t >v17_v32bis_tx_floating_rrc.h
-
-V22BIS_RX_INCL = v22bis_rx_1200_fixed_rrc.h \
-                 v22bis_rx_2400_fixed_rrc.h \
-                 v22bis_rx_1200_floating_rrc.h \
-                 v22bis_rx_2400_floating_rrc.h
+V22BIS_RX_INCL = v22bis_rx_1200_rrc.h \
+                 v22bis_rx_2400_rrc.h
 
 v22bis_rx.$(OBJEXT): ${V22BIS_RX_INCL}
 
 v22bis_rx.lo: ${V22BIS_RX_INCL}
 
-v22bis_rx_1200_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.22bis1200 -i -r >v22bis_rx_1200_fixed_rrc.h
+v22bis_rx_1200_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.22bis1200 -r >v22bis_rx_1200_rrc.h
 
-v22bis_rx_2400_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.22bis2400 -i -r >v22bis_rx_2400_fixed_rrc.h
+v22bis_rx_2400_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.22bis2400 -r >v22bis_rx_2400_rrc.h
 
-v22bis_rx_1200_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.22bis1200 -r >v22bis_rx_1200_floating_rrc.h
-
-v22bis_rx_2400_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.22bis2400 -r >v22bis_rx_2400_floating_rrc.h
-
-V22BIS_TX_INCL = v22bis_tx_fixed_rrc.h \
-                 v22bis_tx_floating_rrc.h
+V22BIS_TX_INCL = v22bis_tx_rrc.h
 
 v22bis_tx.$(OBJEXT): ${V22BIS_TX_INCL}
 
 v22bis_tx.lo: ${V22BIS_TX_INCL}
 
-v22bis_tx_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.22bis -i -t >v22bis_tx_fixed_rrc.h
+v22bis_tx_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.22bis -t >v22bis_tx_rrc.h
 
-v22bis_tx_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.22bis -t >v22bis_tx_floating_rrc.h
-
-V27_RX_INCL = v27ter_rx_2400_fixed_rrc.h \
-              v27ter_rx_4800_fixed_rrc.h \
-              v27ter_rx_2400_floating_rrc.h \
-              v27ter_rx_4800_floating_rrc.h
+V27_RX_INCL = v27ter_rx_2400_rrc.h \
+              v27ter_rx_4800_rrc.h
 
 v27ter_rx.$(OBJEXT): ${V27_RX_INCL}
 
 v27ter_rx.lo: ${V27_RX_INCL}
 
-v27ter_rx_2400_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.27ter2400 -i -r >v27ter_rx_2400_fixed_rrc.h
+v27ter_rx_2400_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.27ter2400 -r >v27ter_rx_2400_rrc.h
 
-v27ter_rx_4800_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.27ter4800 -i -r >v27ter_rx_4800_fixed_rrc.h
+v27ter_rx_4800_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.27ter4800 -r >v27ter_rx_4800_rrc.h
 
-v27ter_rx_2400_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.27ter2400 -r >v27ter_rx_2400_floating_rrc.h
-
-v27ter_rx_4800_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.27ter4800 -r >v27ter_rx_4800_floating_rrc.h
-
-V27TER_TX_INCL = v27ter_tx_2400_fixed_rrc.h \
-                 v27ter_tx_4800_fixed_rrc.h \
-                 v27ter_tx_2400_floating_rrc.h \
-                 v27ter_tx_4800_floating_rrc.h
+V27TER_TX_INCL = v27ter_tx_2400_rrc.h \
+                 v27ter_tx_4800_rrc.h
 
 v27ter_tx_.$(OBJEXT): ${V27TER_TX_INCL}
 
 v27ter_tx.lo: ${V27TER_TX_INCL}
 
-v27ter_tx_2400_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.27ter2400 -i -t >v27ter_tx_2400_fixed_rrc.h
+v27ter_tx_2400_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.27ter2400 -t >v27ter_tx_2400_rrc.h
 
-v27ter_tx_4800_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.27ter4800 -i -t >v27ter_tx_4800_fixed_rrc.h
+v27ter_tx_4800_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.27ter4800 -t >v27ter_tx_4800_rrc.h
 
-v27ter_tx_2400_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.27ter2400 -t >v27ter_tx_2400_floating_rrc.h
-
-v27ter_tx_4800_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.27ter4800 -t >v27ter_tx_4800_floating_rrc.h
-
-V29_RX_INCL = v29rx_fixed_rrc.h \
-              v29rx_floating_rrc.h
+V29_RX_INCL = v29rx_rrc.h
 
 v29rx.$(OBJEXT): ${V29_RX_INCL}
 
 v29rx.lo: ${V29_RX_INCL}
 
-v29rx_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.29 -i -r >v29rx_fixed_rrc.h
+v29rx_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.29 -r >v29rx_rrc.h
 
-v29rx_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.29 -r >v29rx_floating_rrc.h
-
-V29_TX_INCL = v29tx_fixed_rrc.h \
-              v29tx_floating_rrc.h
+V29_TX_INCL = v29tx_rrc.h
 
 v29tx.$(OBJEXT): ${V29_TX_INCL}
 
 v29tx.lo: ${V29_TX_INCL}
 
-v29tx_fixed_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.29 -i -t >v29tx_fixed_rrc.h
+v29tx_rrc.h: make_modem_filter$(EXEEXT)
+	./make_modem_filter$(EXEEXT) -m V.29 -t >v29tx_rrc.h
 
-v29tx_floating_rrc.h: make_modem_filter$(EXEEXT)
-	./make_modem_filter$(EXEEXT) -m V.29 -t >v29tx_floating_rrc.h
-
-DSP = libspandsp.dsp
 VCPROJ8 = libspandsp.2005.vcproj
 VCPROJ9 = libspandsp.2008.vcproj
+VCPROJ10 = libspandsp.2010.vcproj
+VCPROJ12 = libspandsp.2012.vcxproj
 
 WIN32SOURCES = $(libspandsp_la_SOURCES) .\\msvc\\gettimeofday.c
 WIN32HEADERS = $(nobase_include_HEADERS) spandsp.h
 
-DSPOUT = | awk '{printf("%s\r\n", $$0)}' >> $(DSP)
 VCPROJOUT8 = | awk '{printf("%s\r\n", $$0)}' >> $(VCPROJ8)
 VCPROJOUT9 = | awk '{printf("%s\r\n", $$0)}' >> $(VCPROJ9)
-
-$(DSP): msvc/msvcproj.head msvc/msvcproj.foot Makefile.am
-	echo "creating $(DSP)"
-	@(cp $(srcdir)/msvc/msvcproj.head $(DSP); \
-	echo "# Begin Group \"Source Files\"" $(DSPOUT); \
-	for file in $(WIN32SOURCES); do \
-	echo "# Begin Source File" $(DSPOUT); \
-	echo "" $(DSPOUT); \
-	echo "SOURCE=.\\"$$file $(DSPOUT); \
-	echo "# End Source File" $(DSPOUT); \
-	done; \
-	echo "# End Group" $(DSPOUT); \
-	echo "# Begin Group \"Header Files\"" $(DSPOUT); \
-	for file in $(WIN32HEADERS); do \
-	echo "# Begin Source File" $(DSPOUT); \
-	echo "" $(DSPOUT); \
-	echo "SOURCE=.\\"$$file $(DSPOUT); \
-	echo "# End Source File" $(DSPOUT); \
-	done; \
-	echo "# End Group" $(DSPOUT); \
-	cat $(srcdir)/msvc/msvcproj.foot $(DSPOUT) )
+VCPROJOUT10 = | awk '{printf("%s\r\n", $$0)}' >> $(VCPROJ10)
+VCPROJOUT12 = | awk '{printf("%s\r\n", $$0)}' >> $(VCPROJ12)
 
 $(VCPROJ8): msvc/vc8proj.head msvc/vc8proj.foot Makefile.am
 	echo "creating $(VCPROJ8)"
@@ -548,6 +538,30 @@ $(VCPROJ9): msvc/vc9proj.head msvc/vc9proj.foot Makefile.am
 		echo "<File RelativePath=\""$$file"\"></File>" $(VCPROJOUT9); \
 	done; \
 	cat $(srcdir)/msvc/vc9proj.foot $(VCPROJOUT9) )
+
+$(VCPROJ10): msvc/vc10proj.head msvc/vc10proj.foot Makefile.am
+	echo "creating $(VCPROJ10)"
+	@(cp $(srcdir)/msvc/vc10proj.head $(VCPROJ10); \
+	for file in $(WIN32SOURCES); do \
+		echo "<File RelativePath=\""$$file"\"></File>" $(VCPROJOUT10); \
+	done; \
+	echo "</Filter><Filter  Name=\"Header Files\">" $(VCPROJOUT10); \
+	for file in $(WIN32HEADERS); do \
+		echo "<File RelativePath=\""$$file"\"></File>" $(VCPROJOUT10); \
+	done; \
+	cat $(srcdir)/msvc/vc10proj.foot $(VCPROJOUT10) )
+
+$(VCPROJ12): msvc/vc12proj.head msvc/vc12proj.foot Makefile.am
+	echo "creating $(VCPROJ12)"
+	@(cp $(srcdir)/msvc/vc12proj.head $(VCPROJ12); \
+	for file in $(WIN32SOURCES); do \
+		echo "<File RelativePath=\""$$file"\"></File>" $(VCPROJOUT12); \
+	done; \
+	echo "</Filter><Filter  Name=\"Header Files\">" $(VCPROJOUT12); \
+	for file in $(WIN32HEADERS); do \
+		echo "<File RelativePath=\""$$file"\"></File>" $(VCPROJOUT12); \
+	done; \
+	cat $(srcdir)/msvc/vc12proj.foot $(VCPROJOUT12) )
 
 $(srcdir)/msvc/spandsp.h: spandsp.h.in
 	echo "creating $(srcdir)/msvc/spandsp.h"

@@ -43,6 +43,15 @@ then
 fi
 echo adsi_tests completed OK
 
+./alloc_tests >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo alloc_tests failed!
+    exit $RETVAL
+fi
+echo alloc_tests completed OK
+
 ./async_tests >$STDOUT_DEST 2>$STDERR_DEST
 RETVAL=$?
 if [ $RETVAL != 0 ]
@@ -188,61 +197,14 @@ echo dtmf_tx_tests completed OK
 #echo echo_tests completed OK
 echo echo_tests not enabled
 
-#Try the ITU test pages without ECM
-rm -f fax_tests_1.tif
-./fax_tests >$STDOUT_DEST 2>$STDERR_DEST
+./fax_tests.sh
 RETVAL=$?
 if [ $RETVAL != 0 ]
 then
-    echo fax_tests failed!
+    echo fax_tests.sh failed!
     exit $RETVAL
 fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} fax_tests_1.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo fax_tests failed!
-    exit $RETVAL
-fi
-#Try the ITU test pages with ECM
-rm -f fax_tests_1.tif
-./fax_tests -e >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo fax_tests -e failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} fax_tests_1.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo fax_tests -e failed!
-    exit $RETVAL
-fi
-#Try some mixed sized test pages without ECM
-rm -f fax_tests_1.tif
-./fax_tests -i ${MIXEDSIZES_TIF} >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo fax_tests mixed-sizes failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${MIXEDSIZES_TIF} fax_tests_1.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo fax_tests mixed-sizes failed!
-    exit $RETVAL
-fi
-echo fax_tests completed OK
+echo fax_tests.sh completed OK
 
 ./fsk_tests >$STDOUT_DEST 2>$STDERR_DEST
 RETVAL=$?
@@ -471,15 +433,14 @@ then
 fi
 echo schedule_tests completed OK
 
-#./sig_tone_tests >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo sig_tone_tests failed!
-#    exit $RETVAL
-#fi
-#echo sig_tone_tests completed OK
-echo sig_tone_tests not enabled
+./sig_tone_tests >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo sig_tone_tests failed!
+    exit $RETVAL
+fi
+echo sig_tone_tests completed OK
 
 #./super_tone_rx_tests >$STDOUT_DEST 2>$STDERR_DEST
 #RETVAL=$?
@@ -501,15 +462,14 @@ echo super_tone_rx_tests not enabled
 #echo super_tone_tx_tests completed OK
 echo super_tone_tx_tests not enabled
 
-#./swept_tone_tests >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo swept_tone_tests failed!
-#    exit $RETVAL
-#fi
-#echo swept_tone_tests completed OK
-echo swept_tone_tests not enabled
+./swept_tone_tests >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo swept_tone_tests failed!
+    exit $RETVAL
+fi
+echo swept_tone_tests completed OK
 
 ./t31_tests -r >$STDOUT_DEST 2>$STDERR_DEST
 RETVAL=$?
@@ -527,6 +487,15 @@ then
 fi
 echo t31_tests completed OK
 
+./t35_tests -s >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo t35_tests -s failed!
+    exit $RETVAL
+fi
+echo t35_tests completed OK
+
 ./t38_core_tests >$STDOUT_DEST 2>$STDERR_DEST
 RETVAL=$?
 if [ $RETVAL != 0 ]
@@ -535,78 +504,6 @@ then
     exit $RETVAL
 fi
 echo t38_core_tests completed OK
-
-rm -f t38.tif
-./t38_gateway_tests >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_gateway_tests failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} t38.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_gateway_tests failed!
-    exit $RETVAL
-fi
-rm -f t38.tif
-./t38_gateway_tests -e >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_gateway_tests -e failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} t38.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_gateway_tests -e failed!
-    exit $RETVAL
-fi
-echo t38_gateway_tests completed OK
-
-rm -f t38.tif
-./t38_gateway_to_terminal_tests >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_gateway_to_terminal_tests failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} t38.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_gateway_to_terminal_tests failed!
-    exit $RETVAL
-fi
-rm -f t38.tif
-./t38_gateway_to_terminal_tests -e >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_gateway_to_terminal_tests -e failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} t38.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_gateway_to_terminal_tests -e failed!
-    exit $RETVAL
-fi
-echo t38_gateway_to_terminal_tests completed OK
 
 ./t38_non_ecm_buffer_tests >$STDOUT_DEST 2>$STDERR_DEST
 RETVAL=$?
@@ -617,80 +514,24 @@ then
 fi
 echo t38_non_ecm_buffer_tests completed OK
 
-rm -f t38.tif
-./t38_terminal_to_gateway_tests >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_terminal_to_gateway_tests failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} t38.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_terminal_to_gateway_tests failed!
-    exit $RETVAL
-fi
-rm -f t38.tif
-./t38_terminal_to_gateway_tests -e >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_terminal_to_gateway_tests -e failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} t38.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_terminal_to_gateway_tests -e failed!
-    exit $RETVAL
-fi
-echo t38_terminal_to_gateway_tests completed OK
-
-rm -f t38.tif
-./t38_terminal_tests >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_terminal_tests failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} t38.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_terminal_tests failed!
-    exit $RETVAL
-fi
-rm -f t38.tif
-./t38_terminal_tests -e >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_terminal_tests -e failed!
-    exit $RETVAL
-fi
-# Now use tiffcmp to check the results. It will return non-zero if any page images differ. The -t
-# option means the normal differences in tags will be ignored.
-tiffcmp -t ${ITUTESTS_TIF} t38.tif >/dev/null
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo t38_terminal_tests -e failed!
-    exit $RETVAL
-fi
-echo t38_terminal_tests completed OK
-
 rm -f t4_tests_receive.tif
-./t4_tests >$STDOUT_DEST 2>$STDERR_DEST
+./t4_tests -b 0 >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo t4_tests failed!
+    exit $RETVAL
+fi
+rm -f t4_tests_receive.tif
+./t4_tests -b 1 >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo t4_tests failed!
+    exit $RETVAL
+fi
+rm -f t4_tests_receive.tif
+./t4_tests -b 10 >$STDOUT_DEST 2>$STDERR_DEST
 RETVAL=$?
 if [ $RETVAL != 0 ]
 then
@@ -699,36 +540,35 @@ then
 fi
 echo t4_tests completed OK
 
-#rm -f t4_t6_tests_receive.tif
-#./t4_t6_tests >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo t4_t6_tests failed!
-#    exit $RETVAL
-#fi
-#echo t4_t6_tests completed OK
-#rm -f t81_t82_arith_coding_tests_receive.tif
-#./t4_tests >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo t81_t82_arith_coding_tests failed!
-#    exit $RETVAL
-#fi
-#echo t81_t82_arith_coding_tests completed OK
-echo t81_t82_arith_coding_tests not enabled
+rm -f t4_t6_tests_receive.tif
+./t4_t6_tests >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo t4_t6_tests failed!
+    exit $RETVAL
+fi
+echo t4_t6_tests completed OK
 
-#rm -f t85_tests_receive.tif
-#./t4_tests >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo t85_tests failed!
-#    exit $RETVAL
-#fi
-#echo t85_tests completed OK
-echo t85_tests not enabled
+rm -f t81_t82_arith_coding_tests_receive.tif
+./t81_t82_arith_coding_tests >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo t81_t82_arith_coding_tests failed!
+    exit $RETVAL
+fi
+echo t81_t82_arith_coding_tests completed OK
+
+rm -f t85_tests_receive.tif
+./t85_tests >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo t85_tests failed!
+    exit $RETVAL
+fi
+echo t85_tests completed OK
 
 #./time_scale_tests >$STDOUT_DEST 2>$STDERR_DEST
 #RETVAL=$?
@@ -769,120 +609,101 @@ echo tone_detect_tests not enabled
 #echo tone_generate_tests completed OK
 echo tone_generate_tests not enabled
 
-./v17_tests -b 14400 -s -42 -n -66 >$STDOUT_DEST 2>$STDERR_DEST
+./tsb85_tests.sh >/dev/null
 RETVAL=$?
 if [ $RETVAL != 0 ]
 then
-    echo v17_tests failed!
+    echo ./tsb85_tests.sh failed!
     exit $RETVAL
 fi
-./v17_tests -b 12000 -s -42 -n -61 >$STDOUT_DEST 2>$STDERR_DEST
+./tsb85_extra_tests.sh
 RETVAL=$?
 if [ $RETVAL != 0 ]
 then
-    echo v17_tests failed!
+    echo ./tsb85_extra_tests.sh failed!
     exit $RETVAL
 fi
-./v17_tests -b 9600 -s -42 -n -59 >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo v17_tests failed!
-    exit $RETVAL
-fi
-./v17_tests -b 7200 -s -42 -n -56 >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo v17_tests failed!
-    exit $RETVAL
-fi
+echo tsb85_tests.sh completed OK
+
+for OPTS in "-b 14400 -s -42 -n -66" "-b 12000 -s -42 -n -61" "-b 9600 -s -42 -n -59" "-b 7200 -s -42 -n -56"
+do
+    ./v17_tests ${OPTS} >$STDOUT_DEST 2>$STDERR_DEST
+    RETVAL=$?
+    if [ $RETVAL != 0 ]
+    then
+        echo v17_tests ${OPTS} failed!
+        exit $RETVAL
+    fi
+done
 echo v17_tests completed OK
 
-#./v22bis_tests -b 2400 >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo v22bis_tests failed!
-#    exit $RETVAL
-#fi
-#./v22bis_tests -b 1200 >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo v22bis_tests failed!
-#    exit $RETVAL
-#fi
+#for OPTS in "-b 2400" "-b 1200"
+#do
+#    ./v22bis_tests ${OPTS} >$STDOUT_DEST 2>$STDERR_DEST
+#    RETVAL=$?
+#    if [ $RETVAL != 0 ]
+#    then
+#        echo v22bis_tests ${OPTS} failed!
+#        exit $RETVAL
+#    fi
+#done
 #echo v22bis_tests completed OK
 echo v22bis_tests not enabled
 
-./v27ter_tests -b 4800 -s -42 -n -57 >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo v27ter_tests failed!
-    exit $RETVAL
-fi
-./v27ter_tests -b 2400 -s -42 -n -51 >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo v27ter_tests failed!
-    exit $RETVAL
-fi
+for OPTS in "-b 4800 -s -42 -n -57" "-b 2400 -s -42 -n -51"
+do
+    ./v27ter_tests ${OPTS} >$STDOUT_DEST 2>$STDERR_DEST
+    RETVAL=$?
+    if [ $RETVAL != 0 ]
+    then
+        echo v27ter_tests ${OPTS} failed!
+        exit $RETVAL
+    fi
+done
 echo v27ter_tests completed OK
 
-./v29_tests -b 9600 -s -42 -n -62 >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo v29_tests failed!
-    exit $RETVAL
-fi
-./v29_tests -b 7200 -s -42 -n -58 >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo v29_tests failed!
-    exit $RETVAL
-fi
-./v29_tests -b 4800 -s -42 -n -54 >$STDOUT_DEST 2>$STDERR_DEST
-RETVAL=$?
-if [ $RETVAL != 0 ]
-then
-    echo v29_tests failed!
-    exit $RETVAL
-fi
+for OPTS in "-b 9600 -s -42 -n -62" "-b 7200 -s -42 -n -59" "-b 4800 -s -42 -n -54"
+do
+    ./v29_tests ${OPTS} >$STDOUT_DEST 2>$STDERR_DEST
+    RETVAL=$?
+    if [ $RETVAL != 0 ]
+    then
+        echo v29_tests ${OPTS} failed!
+        exit $RETVAL
+    fi
+done
 echo v29_tests completed OK
 
-#./v32bis_tests -b 14400 -s -42 -n -66 >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo v32bis_tests failed!
-#    exit $RETVAL
-#fi
+#for OPTS in "-b 14400 -s -42 -n -66" "-b 12000 -s -42 -n -61" "-b 9600 -s -42 -n -59" "-b 7200 -s -42 -n -56"
+#do
+#    ./v32bis_tests ${OPTS} >$STDOUT_DEST 2>$STDERR_DEST
+#    RETVAL=$?
+#    if [ $RETVAL != 0 ]
+#    then
+#        echo v32bis_tests ${OPTS} failed!
+#        exit $RETVAL
+#    fi
+#done
 #echo v32bis_tests completed OK
+echo v32bis_tests not enabled
 
-#./v42_tests >$STDOUT_DEST 2>$STDERR_DEST
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo v42_tests failed!
-#    exit $RETVAL
-#fi
-#echo v42_tests completed OK
-echo v42_tests not enabled
+./v42_tests >$STDOUT_DEST 2>$STDERR_DEST
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo v42_tests failed!
+    exit $RETVAL
+fi
+echo v42_tests completed OK
 
-#./v42bis_tests.sh >/dev/null
-#RETVAL=$?
-#if [ $RETVAL != 0 ]
-#then
-#    echo v42bis_tests failed!
-#    exit $RETVAL
-#fi
-#echo v42bis_tests completed OK
-echo v42bis_tests not enabled
+./v42bis_tests.sh >/dev/null
+RETVAL=$?
+if [ $RETVAL != 0 ]
+then
+    echo v42bis_tests.sh failed!
+    exit $RETVAL
+fi
+echo v42bis_tests.sh completed OK
 
 ./v8_tests >$STDOUT_DEST 2>$STDERR_DEST
 RETVAL=$?

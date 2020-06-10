@@ -3,6 +3,9 @@
 /* Define to 1 if you have the acosf() function. */
 #undef HAVE_ACOSF
 
+/* Define to 1 if you have the aligned_alloc() function. */
+#undef HAVE_ALIGNED_ALLOC
+
 /* Define to 1 if you have the asinf() function. */
 #undef HAVE_ASINF
 
@@ -75,9 +78,6 @@
 /* Define to 1 if you have the <jpeglib.h> header file. */
 #undef HAVE_JPEGLIB_H
 
-/* Define to 1 if you have the `jpeg' library (-ljpeg). */
-#undef HAVE_LIBJPEG
-
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
 
@@ -127,6 +127,9 @@
 /* Define to 1 if you have the <math.h> header file. */
 #undef HAVE_MATH_H
 
+/* Define to 1 if you have the `memalign' function. */
+#undef HAVE_MEMALIGN
+
 /* Define to 1 if you have the `memmove' function. */
 #undef HAVE_MEMMOVE
 
@@ -141,6 +144,9 @@
 
 /* Define to 1 if you have the <pcap.h> header file. */
 #undef HAVE_PCAP_H
+
+/* Define to 1 if you have the `posix_memalign' function. */
+#undef HAVE_POSIX_MEMALIGN
 
 /* Define to 1 if you have the powf() function. */
 #undef HAVE_POWF
@@ -169,6 +175,9 @@
 
 /* Define to 1 if you have the <stdbool.h> header file. */
 #undef HAVE_STDBOOL_H
+
+/* Define to 1 if you have the <stdfix.h> header file. */
+#undef HAVE_STDFIX_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -233,6 +242,9 @@
 /* Define to 1 if you have the <tiffio.h> header file. */
 #undef HAVE_TIFFIO_H
 
+/* Define to 1 if you have the <tif_dir.h> header file. */
+#undef HAVE_TIF_DIR_H
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
@@ -242,8 +254,7 @@
 /* Define to 1 if you have the <X11/X.h> header file. */
 #undef HAVE_X11_X_H
 
-/* Define to the sub-directory in which libtool stores uninstalled libraries.
-   */
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
 /* Name of package */
@@ -267,6 +278,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* "enable replacement memmove if system memmove is broken or missing" */
+#undef PREFER_PORTABLE_MEMMOVE
+
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
 
@@ -282,8 +296,26 @@
 /* Do not expect a misaligned memory access to work correctly */
 #undef SPANDSP_MISALIGNED_ACCESS_FAILS
 
+/* Support T.43 JBIG gray and colour compression */
+#undef SPANDSP_SUPPORT_T43
+
+/* Support TIFF/FX in TIFF file handling */
+#undef SPANDSP_SUPPORT_TIFF_FX
+
+/* Support the V.32bis modem */
+#undef SPANDSP_SUPPORT_V32BIS
+
+/* Support the V.34 FAX modem */
+#undef SPANDSP_SUPPORT_V34
+
+/* Use the NEON instruction set (ARMV7 only). */
+#undef SPANDSP_USE_ARM_NEON
+
 /* Use the AVX instruction set (i386 and x86_64 only). */
 #undef SPANDSP_USE_AVX
+
+/* Use the AVX2 instruction set (i386 and x86_64 only). */
+#undef SPANDSP_USE_AVX2
 
 /* Use the library symbol export capability of the compiler */
 #undef SPANDSP_USE_EXPORT_CAPABILITY
@@ -303,17 +335,11 @@
 /* Use the SSE3 instruction set (i386 and x86_64 only). */
 #undef SPANDSP_USE_SSE3
 
-/* Use the SSE4A instruction set (i386 and x86_64 only). */
-#undef SPANDSP_USE_SSE4A
-
 /* Use the SSE4.1 instruction set (i386 and x86_64 only). */
 #undef SPANDSP_USE_SSE4_1
 
 /* Use the SSE4.2 instruction set (i386 and x86_64 only). */
 #undef SPANDSP_USE_SSE4_2
-
-/* Use the SSE5 instruction set (i386 and x86_64 only). */
-#undef SPANDSP_USE_SSE5
 
 /* Use the SSSE3 instruction set (i386 and x86_64 only). */
 #undef SPANDSP_USE_SSSE3

@@ -48,6 +48,12 @@ or 1200bps if one or both ends to not acknowledge that 2400bps is OK.
 #if !defined(_SPANDSP_V22BIS_H_)
 #define _SPANDSP_V22BIS_H_
 
+#if defined(SPANDSP_USE_FIXED_POINT)
+#define V22BIS_CONSTELLATION_SCALING_FACTOR     1024.0
+#else
+#define V22BIS_CONSTELLATION_SCALING_FACTOR     1.0
+#endif
+
 enum
 {
     V22BIS_GUARD_TONE_NONE,
@@ -61,8 +67,6 @@ enum
 */
 typedef struct v22bis_state_s v22bis_state_t;
 
-extern const complexf_t v22bis_constellation[16];
-
 #if defined(__cplusplus)
 extern "C"
 {
@@ -74,7 +78,7 @@ extern "C"
     \param amp The audio sample buffer.
     \param len The number of samples in the buffer.
     \return The number of samples unprocessed. */
-SPAN_DECLARE_NONSTD(int) v22bis_rx(v22bis_state_t *s, const int16_t amp[], int len);
+SPAN_DECLARE(int) v22bis_rx(v22bis_state_t *s, const int16_t amp[], int len);
 
 /*! Fake processing of a missing block of received V.22bis modem audio samples.
     (e.g due to packet loss).
@@ -82,13 +86,17 @@ SPAN_DECLARE_NONSTD(int) v22bis_rx(v22bis_state_t *s, const int16_t amp[], int l
     \param s The modem context.
     \param len The number of samples to fake.
     \return The number of samples unprocessed. */
-SPAN_DECLARE_NONSTD(int) v22bis_rx_fillin(v22bis_state_t *s, int len);
+SPAN_DECLARE(int) v22bis_rx_fillin(v22bis_state_t *s, int len);
 
 /*! Get a snapshot of the current equalizer coefficients.
     \brief Get a snapshot of the current equalizer coefficients.
     \param coeffs The vector of complex coefficients.
     \return The number of coefficients in the vector. */
+#if defined(SPANDSP_USE_FIXED_POINT)
+SPAN_DECLARE(int) v22bis_rx_equalizer_state(v22bis_state_t *s, complexi16_t **coeffs);
+#else
 SPAN_DECLARE(int) v22bis_rx_equalizer_state(v22bis_state_t *s, complexf_t **coeffs);
+#endif
 
 /*! Get the current received carrier frequency.
     \param s The modem context.
@@ -122,7 +130,7 @@ SPAN_DECLARE(void) v22bis_rx_set_qam_report_handler(v22bis_state_t *s, qam_repor
     \param amp The audio sample buffer.
     \param len The number of samples to be generated.
     \return The number of samples actually generated. */
-SPAN_DECLARE_NONSTD(int) v22bis_tx(v22bis_state_t *s, int16_t amp[], int len);
+SPAN_DECLARE(int) v22bis_tx(v22bis_state_t *s, int16_t amp[], int len);
 
 /*! Adjust a V.22bis modem transmit context's power output.
     \brief Adjust a V.22bis modem transmit context's output power.
@@ -147,9 +155,9 @@ SPAN_DECLARE(int) v22bis_request_retrain(v22bis_state_t *s, int bit_rate);
 /*! Request a loopback 2 for a V.22bis modem context.
     \brief Request a loopback 2 for a V.22bis modem context.
     \param s The modem context.
-    \param enable TRUE to enable loopback, or FALSE to disable it.
+    \param enable True to enable loopback, or false to disable it.
     \return 0 for OK, -1 for request reject. */
-SPAN_DECLARE(int) v22bis_remote_loopback(v22bis_state_t *s, int enable);
+SPAN_DECLARE(int) v22bis_remote_loopback(v22bis_state_t *s, bool enable);
 
 /*! Report the current operating bit rate of a V.22bis modem context.
     \brief Report the current operating bit rate of a V.22bis modem context
@@ -162,15 +170,16 @@ SPAN_DECLARE(int) v22bis_get_current_bit_rate(v22bis_state_t *s);
     \param s The modem context.
     \param bit_rate The bit rate of the modem. Valid values are 1200 and 2400.
     \param guard The guard tone option. 0 = none, 1 = 550Hz, 2 = 1800Hz.
-    \param calling_party TRUE if this is the calling modem.
+    \param calling_party True if this is the calling modem.
     \param get_bit The callback routine used to get the data to be transmitted.
-    \param put_bit The callback routine used to get the data to be transmitted.
-    \param user_data An opaque pointer, passed in calls to the get and put routines.
+    \param get_bit_user_data An opaque pointer, passed in calls to the get_bit routine.
+    \param put_bit The callback routine used to put the data received.
+    \param put_bit_user_data An opaque pointer, passed in calls to the put_bit routine.
     \return A pointer to the modem context, or NULL if there was a problem. */
 SPAN_DECLARE(v22bis_state_t *) v22bis_init(v22bis_state_t *s,
                                            int bit_rate,
                                            int guard,
-                                           int calling_party,
+                                           bool calling_party,
                                            get_bit_func_t get_bit,
                                            void *get_bit_user_data,
                                            put_bit_func_t put_bit,

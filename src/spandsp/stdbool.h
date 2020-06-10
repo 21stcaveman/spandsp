@@ -33,20 +33,29 @@
 #if !defined(_STDBOOL_H)
 #define _STDBOOL_H
 
+#ifdef _MSC_VER 
+#pragma warning (disable: 4005)
+#endif
+
 #if !defined(__cplusplus)
 
-#define _Bool   int
-#define bool    int
+#ifndef _MSC_VER 
+typedef int     _Bool;
+#endif
+typedef int     bool;
 #define false   0
 #define true    (!false)
 
 #else
 
-#define _Bool   bool
-#define bool    bool
+typedef bool    _Bool;
 #define false   false
 #define true    true
 
+#endif
+
+#ifdef _MSC_VER 
+#pragma warning (default: 4005)
 #endif
 
 /* Signal that all the definitions are present.  */

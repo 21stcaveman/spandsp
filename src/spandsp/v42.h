@@ -45,7 +45,7 @@ extern "C"
 
 SPAN_DECLARE(const char *) lapm_status_to_str(int status);
 
-SPAN_DECLARE_NONSTD(void) lapm_receive(void *user_data, const uint8_t *frame, int len, int ok);
+SPAN_DECLARE(void) lapm_receive(void *user_data, const uint8_t *frame, int len, int ok);
 
 SPAN_DECLARE(void) v42_start(v42_state_t *s);
 
@@ -70,18 +70,24 @@ SPAN_DECLARE(int) v42_tx_bit(void *user_data);
 
 SPAN_DECLARE(void) v42_set_status_callback(v42_state_t *s, modem_status_func_t callback, void *user_data);
 
+/*! Get the logging context associated with a V.42 context.
+    \brief Get the logging context associated with a V.42 context.
+    \param s The V.42 context.
+    \return A pointer to the logging context */
+SPAN_DECLARE(logging_state_t *) v42_get_logging_state(v42_state_t *s);
+
 /*! Initialise a V.42 context.
     \param s The V.42 context.
-    \param calling_party TRUE if caller mode, else answerer mode.
-    \param detect TRUE to perform the V.42 detection, else go straight into LAP.M 
+    \param calling_party True if caller mode, else answerer mode.
+    \param detect True to perform the V.42 detection, else go straight into LAP.M
     \param iframe_get A callback function to handle received frames of data.
     \param iframe_put A callback function to get frames of data for transmission.
     \param user_data An opaque pointer passed to the frame handler routines.
     \return ???
 */
 SPAN_DECLARE(v42_state_t *) v42_init(v42_state_t *s,
-                                     int calling_party,
-                                     int detect,
+                                     bool calling_party,
+                                     bool detect,
                                      get_msg_func_t iframe_get,
                                      put_msg_func_t iframe_put,
                                      void *user_data);

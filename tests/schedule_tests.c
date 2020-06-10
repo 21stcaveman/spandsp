@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
     when1 = span_schedule_time(&sched) + 500000;
     when2 = span_schedule_time(&sched) + 550000;
     //span_schedule_del(&sched, id);
-    
+
     for (i = 0;  i < 100000000;  i += 20000)
         span_schedule_update(&sched, 20000);
     when = span_schedule_time(&sched);
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     span_schedule_release(&sched);
 
     printf("Tests passed.\n");
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

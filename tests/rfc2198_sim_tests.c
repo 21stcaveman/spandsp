@@ -44,10 +44,6 @@
 #define GEN_CONST
 #endif
 
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
-
 #include "spandsp.h"
 #include "spandsp-sim.h"
 
@@ -93,7 +89,7 @@ int main(int argc, char *argv[])
 #endif
 
 #if defined(ENABLE_GUI)
-    use_gui = FALSE;
+    use_gui = false;
 #endif
     model_no = MODEL_NO;
     speed_pattern_no = SPEED_PATTERN_NO;
@@ -104,7 +100,7 @@ int main(int argc, char *argv[])
         {
         case 'g':
 #if defined(ENABLE_GUI)
-            use_gui = TRUE;
+            use_gui = true;
 #else
             fprintf(stderr, "Graphical monitoring not available\n");
             exit(2);
@@ -187,7 +183,7 @@ int main(int argc, char *argv[])
         if ((len = rfc2198_sim_put(s, put_pkt, put_pkt_len, i, (double) i*0.001*PACKET_INTERVAL)) > 0)
             packets_really_put++;
         packets_put++;
-#if 0        
+#if 0
         if (i == 5)
             rfc2198_sim_queue_dump(s);
 #endif
@@ -232,6 +228,10 @@ int main(int argc, char *argv[])
     while (get_pkt_len >= 0);
 
     fclose(out_file);
+
+    rfc2198_sim_free(s);
+
+    free(packet_arrival_times);
 
     printf("Put %d packets. Really put %d packets. Got %d packets.\n", packets_put, packets_really_put, packets_got);
     printf("%d OOS packets, %d missing packets\n", oos_packets_got, missing_packets_got - oos_packets_got);

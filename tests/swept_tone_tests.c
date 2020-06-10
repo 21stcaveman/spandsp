@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     }
 
     printf("Test with swept tone.\n");
-    s = swept_tone_init(NULL, 200.0f, 3900.0f, -10.0f, 60*SAMPLE_RATE, TRUE);
+    s = swept_tone_init(NULL, 200.0f, 3900.0f, -10.0f, 60*SAMPLE_RATE, true);
     for (j = 0;  j < 60*SAMPLE_RATE;  j += BLOCK_LEN)
     {
         len = swept_tone(s, buf, BLOCK_LEN);
@@ -92,8 +92,12 @@ int main(int argc, char *argv[])
         exit(2);
     }
 
+    swept_tone_free(s);
+
+    power_meter_release(&meter);
+
     printf("Tests passed.\n");
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

@@ -39,9 +39,15 @@
 #if defined(HAVE_MATH_H)
 #include <math.h>
 #endif
+#if defined(HAVE_STDBOOL_H)
+#include <stdbool.h>
+#else
+#include "spandsp/stdbool.h"
+#endif
 #include "floating_fudge.h"
 
 #include "spandsp/telephony.h"
+#include "spandsp/alloc.h"
 #include "spandsp/fast_convert.h"
 #include "spandsp/logging.h"
 #include "spandsp/complex.h"
@@ -59,12 +65,13 @@
 #include "spandsp/private/v27ter_tx.h"
 
 #if defined(SPANDSP_USE_FIXED_POINT)
-#include "v27ter_tx_4800_fixed_rrc.h"
-#include "v27ter_tx_2400_fixed_rrc.h"
+#define FP_SCALE(x)                     FP_Q6_10(x)
 #else
-#include "v27ter_tx_4800_floating_rrc.h"
-#include "v27ter_tx_2400_floating_rrc.h"
+#define FP_SCALE(x)                     (x)
 #endif
+
+#include "v27ter_tx_4800_rrc.h"
+#include "v27ter_tx_2400_rrc.h"
 
 /*! The nominal frequency of the carrier, in Hertz */
 #define CARRIER_NOMINAL_FREQ            1800.0f
@@ -119,7 +126,7 @@ static __inline__ int scramble(v27ter_tx_state_t *s, int in_bit)
 static __inline__ int get_scrambled_bit(v27ter_tx_state_t *s)
 {
     int bit;
-    
+
     if ((bit = s->current_get_bit(s->get_bit_user_data)) == SIG_STATUS_END_OF_DATA)
     {
         /* End of real data. Switch to the fake get_bit routine, until we
@@ -127,7 +134,7 @@ static __inline__ int get_scrambled_bit(v27ter_tx_state_t *s)
         if (s->status_handler)
             s->status_handler(s->status_user_data, SIG_STATUS_END_OF_DATA);
         s->current_get_bit = fake_get_bit;
-        s->in_training = TRUE;
+        s->in_training = true;
         bit = 1;
     }
     return scramble(s, bit);
@@ -149,37 +156,27 @@ static complexf_t getbaud(v27ter_tx_state_t *s)
         0, 2, 6, 4
     };
 #if defined(SPANDSP_USE_FIXED_POINT)
-    static const complexi16_t constellation[8] =
-    {
-        { 1414,    0000},       /*   0deg */
-        { 1000,    1000},       /*  45deg */
-        { 0000,    1414},       /*  90deg */
-        {-1000,    1000},       /* 135deg */
-        {-1414,    0000},       /* 180deg */
-        {-1000,   -1000},       /* 225deg */
-        { 0000,   -1414},       /* 270deg */
-        { 1000,   -1000}        /* 315deg */
-    };
     static const complexi16_t zero = {0, 0};
+    static const complexi16_t constellation[8] =
 #else
-    static const complexf_t constellation[8] =
-    {
-        { 1.414f,  0.0f},       /*   0deg */
-        { 1.0f,    1.0f},       /*  45deg */
-        { 0.0f,    1.414f},     /*  90deg */
-        {-1.0f,    1.0f},       /* 135deg */
-        {-1.414f,  0.0f},       /* 180deg */
-        {-1.0f,   -1.0f},       /* 225deg */
-        { 0.0f,   -1.414f},     /* 270deg */
-        { 1.0f,   -1.0f}        /* 315deg */
-    };
     static const complexf_t zero = {0.0f, 0.0f};
+    static const complexf_t constellation[8] =
 #endif
+    {
+        {FP_SCALE( 1.414f), FP_SCALE( 0.0f)},       /*   0deg */
+        {FP_SCALE( 1.0f),   FP_SCALE( 1.0f)},       /*  45deg */
+        {FP_SCALE( 0.0f),   FP_SCALE( 1.414f)},     /*  90deg */
+        {FP_SCALE(-1.0f),   FP_SCALE( 1.0f)},       /* 135deg */
+        {FP_SCALE(-1.414f), FP_SCALE( 0.0f)},       /* 180deg */
+        {FP_SCALE(-1.0f),   FP_SCALE(-1.0f)},       /* 225deg */
+        {FP_SCALE( 0.0f),   FP_SCALE(-1.414f)},     /* 270deg */
+        {FP_SCALE( 1.0f),   FP_SCALE(-1.0f)}        /* 315deg */
+    };
     int bits;
 
     if (s->in_training)
     {
-       	/* Send the training sequence */
+        /* Send the training sequence */
         if (++s->training_step <= V27TER_TRAINING_SEG_5)
         {
             if (s->training_step <= V27TER_TRAINING_SEG_4)
@@ -217,7 +214,7 @@ static complexf_t getbaud(v27ter_tx_state_t *s)
             /* Switch from the fake get_bit routine, to the user supplied real
                one, and we are up and running. */
             s->current_get_bit = s->get_bit;
-            s->in_training = FALSE;
+            s->in_training = false;
         }
         if (s->training_step == V27TER_TRAINING_SHUTDOWN_END)
         {
@@ -244,16 +241,19 @@ static complexf_t getbaud(v27ter_tx_state_t *s)
 }
 /*- End of function --------------------------------------------------------*/
 
-SPAN_DECLARE_NONSTD(int) v27ter_tx(v27ter_tx_state_t *s, int16_t amp[], int len)
+SPAN_DECLARE(int) v27ter_tx(v27ter_tx_state_t *s, int16_t amp[], int len)
 {
 #if defined(SPANDSP_USE_FIXED_POINT)
-    complexi_t x;
-    complexi_t z;
+    complexi16_t v;
+    complexi32_t x;
+    complexi32_t z;
+    int16_t iamp;
 #else
+    complexf_t v;
     complexf_t x;
     complexf_t z;
+    float famp;
 #endif
-    int i;
     int sample;
 
     if (s->training_step >= V27TER_TRAINING_SHUTDOWN_END)
@@ -271,37 +271,30 @@ SPAN_DECLARE_NONSTD(int) v27ter_tx(v27ter_tx_state_t *s, int16_t amp[], int len)
             if (++s->baud_phase >= 5)
             {
                 s->baud_phase -= 5;
-                s->rrc_filter[s->rrc_filter_step] =
-                s->rrc_filter[s->rrc_filter_step + V27TER_TX_FILTER_STEPS] = getbaud(s);
+                v = getbaud(s);;
+                s->rrc_filter_re[s->rrc_filter_step] = v.re;
+                s->rrc_filter_im[s->rrc_filter_step] = v.im;
                 if (++s->rrc_filter_step >= V27TER_TX_FILTER_STEPS)
                     s->rrc_filter_step = 0;
             }
-            /* Root raised cosine pulse shaping at baseband */
 #if defined(SPANDSP_USE_FIXED_POINT)
-            x = complex_seti(0, 0);
-            for (i = 0;  i < V27TER_TX_FILTER_STEPS;  i++)
-            {
-                x.re += (int32_t) tx_pulseshaper_4800[TX_PULSESHAPER_4800_COEFF_SETS - 1 - s->baud_phase][i]*(int32_t) s->rrc_filter[i + s->rrc_filter_step].re;
-                x.im += (int32_t) tx_pulseshaper_4800[TX_PULSESHAPER_4800_COEFF_SETS - 1 - s->baud_phase][i]*(int32_t) s->rrc_filter[i + s->rrc_filter_step].im;
-            }
+            /* Root raised cosine pulse shaping at baseband */
+            x.re = vec_circular_dot_prodi16(s->rrc_filter_re, tx_pulseshaper_4800[TX_PULSESHAPER_4800_COEFF_SETS - 1 - s->baud_phase], V27TER_TX_FILTER_STEPS, s->rrc_filter_step) >> (10 + 4);
+            x.im = vec_circular_dot_prodi16(s->rrc_filter_im, tx_pulseshaper_4800[TX_PULSESHAPER_4800_COEFF_SETS - 1 - s->baud_phase], V27TER_TX_FILTER_STEPS, s->rrc_filter_step) >> (10 + 4);
             /* Now create and modulate the carrier */
-            x.re >>= 14;
-            x.im >>= 14;
-            z = dds_complexi(&s->carrier_phase, s->carrier_phase_rate);
+            z = dds_complexi32(&s->carrier_phase, s->carrier_phase_rate);
+            iamp = ((int32_t) x.re*z.re - x.im*z.im) >> 15;
             /* Don't bother saturating. We should never clip. */
-            i = (x.re*z.re - x.im*z.im) >> 15;
-            amp[sample] = (int16_t) ((i*s->gain_4800) >> 15);
+            amp[sample] = (int16_t) (((int32_t) iamp*s->gain_4800) >> 11);
 #else
-            x = complex_setf(0.0f, 0.0f);
-            for (i = 0;  i < V27TER_TX_FILTER_STEPS;  i++)
-            {
-                x.re += tx_pulseshaper_4800[TX_PULSESHAPER_4800_COEFF_SETS - 1 - s->baud_phase][i]*s->rrc_filter[i + s->rrc_filter_step].re;
-                x.im += tx_pulseshaper_4800[TX_PULSESHAPER_4800_COEFF_SETS - 1 - s->baud_phase][i]*s->rrc_filter[i + s->rrc_filter_step].im;
-            }
+            /* Root raised cosine pulse shaping at baseband */
+            x.re = vec_circular_dot_prodf(s->rrc_filter_re, tx_pulseshaper_4800[TX_PULSESHAPER_4800_COEFF_SETS - 1 - s->baud_phase], V27TER_TX_FILTER_STEPS, s->rrc_filter_step);
+            x.im = vec_circular_dot_prodf(s->rrc_filter_im, tx_pulseshaper_4800[TX_PULSESHAPER_4800_COEFF_SETS - 1 - s->baud_phase], V27TER_TX_FILTER_STEPS, s->rrc_filter_step);
             /* Now create and modulate the carrier */
             z = dds_complexf(&s->carrier_phase, s->carrier_phase_rate);
+            famp = x.re*z.re - x.im*z.im;
             /* Don't bother saturating. We should never clip. */
-            amp[sample] = (int16_t) lfastrintf((x.re*z.re - x.im*z.im)*s->gain_4800);
+            amp[sample] = (int16_t) lfastrintf(famp*s->gain_4800);
 #endif
         }
     }
@@ -312,37 +305,30 @@ SPAN_DECLARE_NONSTD(int) v27ter_tx(v27ter_tx_state_t *s, int16_t amp[], int len)
             if ((s->baud_phase += 3) >= 20)
             {
                 s->baud_phase -= 20;
-                s->rrc_filter[s->rrc_filter_step] =
-                s->rrc_filter[s->rrc_filter_step + V27TER_TX_FILTER_STEPS] = getbaud(s);
+                v = getbaud(s);
+                s->rrc_filter_re[s->rrc_filter_step] = v.re;
+                s->rrc_filter_im[s->rrc_filter_step] = v.im;
                 if (++s->rrc_filter_step >= V27TER_TX_FILTER_STEPS)
                     s->rrc_filter_step = 0;
             }
-            /* Root raised cosine pulse shaping at baseband */
 #if defined(SPANDSP_USE_FIXED_POINT)
-            x = complex_seti(0, 0);
-            for (i = 0;  i < V27TER_TX_FILTER_STEPS;  i++)
-            {
-                x.re += (int32_t) tx_pulseshaper_2400[TX_PULSESHAPER_2400_COEFF_SETS - 1 - s->baud_phase][i]*(int32_t) s->rrc_filter[i + s->rrc_filter_step].re;
-                x.im += (int32_t) tx_pulseshaper_2400[TX_PULSESHAPER_2400_COEFF_SETS - 1 - s->baud_phase][i]*(int32_t) s->rrc_filter[i + s->rrc_filter_step].im;
-            }
+            /* Root raised cosine pulse shaping at baseband */
+            x.re = vec_circular_dot_prodi16(s->rrc_filter_re, tx_pulseshaper_2400[TX_PULSESHAPER_2400_COEFF_SETS - 1 - s->baud_phase], V27TER_TX_FILTER_STEPS, s->rrc_filter_step) >> (10 + 4);
+            x.im = vec_circular_dot_prodi16(s->rrc_filter_im, tx_pulseshaper_2400[TX_PULSESHAPER_2400_COEFF_SETS - 1 - s->baud_phase], V27TER_TX_FILTER_STEPS, s->rrc_filter_step) >> (10 + 4);
             /* Now create and modulate the carrier */
-            x.re >>= 14;
-            x.im >>= 14;
-            z = dds_complexi(&s->carrier_phase, s->carrier_phase_rate);
+            z = dds_complexi32(&s->carrier_phase, s->carrier_phase_rate);
+            iamp = ((int32_t) x.re*z.re - x.im*z.im) >> 15;
             /* Don't bother saturating. We should never clip. */
-            i = (x.re*z.re - x.im*z.im) >> 15;
-            amp[sample] = (int16_t) ((i*s->gain_2400) >> 15);
+            amp[sample] = (int16_t) (((int32_t) iamp*s->gain_2400) >> 11);
 #else
-            x = complex_setf(0.0f, 0.0f);
-            for (i = 0;  i < V27TER_TX_FILTER_STEPS;  i++)
-            {
-                x.re += tx_pulseshaper_2400[TX_PULSESHAPER_2400_COEFF_SETS - 1 - s->baud_phase][i]*s->rrc_filter[i + s->rrc_filter_step].re;
-                x.im += tx_pulseshaper_2400[TX_PULSESHAPER_2400_COEFF_SETS - 1 - s->baud_phase][i]*s->rrc_filter[i + s->rrc_filter_step].im;
-            }
+            /* Root raised cosine pulse shaping at baseband */
+            x.re = vec_circular_dot_prodf(s->rrc_filter_re, tx_pulseshaper_2400[TX_PULSESHAPER_2400_COEFF_SETS - 1 - s->baud_phase], V27TER_TX_FILTER_STEPS, s->rrc_filter_step);
+            x.im = vec_circular_dot_prodf(s->rrc_filter_im, tx_pulseshaper_2400[TX_PULSESHAPER_2400_COEFF_SETS - 1 - s->baud_phase], V27TER_TX_FILTER_STEPS, s->rrc_filter_step);
             /* Now create and modulate the carrier */
             z = dds_complexf(&s->carrier_phase, s->carrier_phase_rate);
+            famp = x.re*z.re - x.im*z.im;
             /* Don't bother saturating. We should never clip. */
-            amp[sample] = (int16_t) lfastrintf((x.re*z.re - x.im*z.im)*s->gain_2400);
+            amp[sample] = (int16_t) lfastrintf(famp*s->gain_2400);
 #endif
         }
     }
@@ -352,15 +338,15 @@ SPAN_DECLARE_NONSTD(int) v27ter_tx(v27ter_tx_state_t *s, int16_t amp[], int len)
 
 SPAN_DECLARE(void) v27ter_tx_power(v27ter_tx_state_t *s, float power)
 {
-    float l;
+    float gain;
 
-    l = powf(10.0f, (power - DBM0_MAX_POWER)/20.0f)*32768.0f;
+    gain = powf(10.0f, (power - DBM0_MAX_POWER)/20.0f)*32768.0f;
 #if defined(SPANDSP_USE_FIXED_POINT)
-    s->gain_2400 = 16.0f*1.024f*(32767.0f/28828.51f)*l/TX_PULSESHAPER_2400_GAIN;
-    s->gain_4800 = 16.0f*1.024f*(32767.0f/28828.46f)*l/TX_PULSESHAPER_4800_GAIN;
+    s->gain_2400 = (int16_t) (gain/TX_PULSESHAPER_2400_GAIN);
+    s->gain_4800 = (int16_t) (gain/TX_PULSESHAPER_4800_GAIN);
 #else
-    s->gain_2400 = l/TX_PULSESHAPER_2400_GAIN;
-    s->gain_4800 = l/TX_PULSESHAPER_4800_GAIN;
+    s->gain_2400 = gain/TX_PULSESHAPER_2400_GAIN;
+    s->gain_4800 = gain/TX_PULSESHAPER_4800_GAIN;
 #endif
 }
 /*- End of function --------------------------------------------------------*/
@@ -387,20 +373,22 @@ SPAN_DECLARE(logging_state_t *) v27ter_tx_get_logging_state(v27ter_tx_state_t *s
 }
 /*- End of function --------------------------------------------------------*/
 
-SPAN_DECLARE(int) v27ter_tx_restart(v27ter_tx_state_t *s, int bit_rate, int tep)
+SPAN_DECLARE(int) v27ter_tx_restart(v27ter_tx_state_t *s, int bit_rate, bool tep)
 {
     if (bit_rate != 4800  &&  bit_rate != 2400)
         return -1;
     s->bit_rate = bit_rate;
 #if defined(SPANDSP_USE_FIXED_POINT)
-    cvec_zeroi16(s->rrc_filter, sizeof(s->rrc_filter)/sizeof(s->rrc_filter[0]));
+    vec_zeroi16(s->rrc_filter_re, sizeof(s->rrc_filter_re)/sizeof(s->rrc_filter_re[0]));
+    vec_zeroi16(s->rrc_filter_im, sizeof(s->rrc_filter_im)/sizeof(s->rrc_filter_im[0]));
 #else
-    cvec_zerof(s->rrc_filter, sizeof(s->rrc_filter)/sizeof(s->rrc_filter[0]));
+    vec_zerof(s->rrc_filter_re, sizeof(s->rrc_filter_re)/sizeof(s->rrc_filter_re[0]));
+    vec_zerof(s->rrc_filter_im, sizeof(s->rrc_filter_im)/sizeof(s->rrc_filter_im[0]));
 #endif
     s->rrc_filter_step = 0;
     s->scramble_reg = 0x3C;
     s->scrambler_pattern_count = 0;
-    s->in_training = TRUE;
+    s->in_training = true;
     s->training_step = (tep)  ?  V27TER_TRAINING_SEG_1  :  V27TER_TRAINING_SEG_2;
     s->carrier_phase = 0;
     s->baud_phase = 0;
@@ -410,7 +398,7 @@ SPAN_DECLARE(int) v27ter_tx_restart(v27ter_tx_state_t *s, int bit_rate, int tep)
 }
 /*- End of function --------------------------------------------------------*/
 
-SPAN_DECLARE(v27ter_tx_state_t *) v27ter_tx_init(v27ter_tx_state_t *s, int bit_rate, int tep, get_bit_func_t get_bit, void *user_data)
+SPAN_DECLARE(v27ter_tx_state_t *) v27ter_tx_init(v27ter_tx_state_t *s, int bit_rate, bool tep, get_bit_func_t get_bit, void *user_data)
 {
     switch (bit_rate)
     {
@@ -422,7 +410,7 @@ SPAN_DECLARE(v27ter_tx_state_t *) v27ter_tx_init(v27ter_tx_state_t *s, int bit_r
     }
     if (s == NULL)
     {
-        if ((s = (v27ter_tx_state_t *) malloc(sizeof(*s))) == NULL)
+        if ((s = (v27ter_tx_state_t *) span_alloc(sizeof(*s))) == NULL)
             return NULL;
     }
     memset(s, 0, sizeof(*s));
@@ -445,7 +433,7 @@ SPAN_DECLARE(int) v27ter_tx_release(v27ter_tx_state_t *s)
 
 SPAN_DECLARE(int) v27ter_tx_free(v27ter_tx_state_t *s)
 {
-    free(s);
+    span_free(s);
     return 0;
 }
 /*- End of function --------------------------------------------------------*/

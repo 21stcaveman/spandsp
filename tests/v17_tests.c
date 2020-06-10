@@ -44,9 +44,6 @@ display of modem status is maintained.
 \section v17_tests_page_sec_2 How is it used?
 */
 
-/* Enable the following definition to enable direct probing into the FAX structures */
-#define WITH_SPANDSP_INTERNALS
-
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -67,9 +64,7 @@ display of modem status is maintained.
 #include <fenv.h>
 #endif
 
-//#if defined(WITH_SPANDSP_INTERNALS)
 #define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
 
 #include "spandsp.h"
 #include "spandsp-sim.h"
@@ -84,7 +79,7 @@ display of modem status is maintained.
 #define OUT_FILE_NAME   "v17.wav"
 
 char *decode_test_file = NULL;
-int use_gui = FALSE;
+bool use_gui = false;
 
 int symbol_no = 0;
 
@@ -122,7 +117,7 @@ static void v17_rx_status(void *user_data, int status)
     v17_rx_state_t *s;
     int i;
     int len;
-#if defined(SPANDSP_USE_FIXED_POINTx)
+#if defined(SPANDSP_USE_FIXED_POINT)
     complexi16_t *coeffs;
 #else
     complexf_t *coeffs;
@@ -133,14 +128,17 @@ static void v17_rx_status(void *user_data, int status)
     switch (status)
     {
     case SIG_STATUS_TRAINING_SUCCEEDED:
-        len = v17_rx_equalizer_state(s, &coeffs);
-        printf("Equalizer:\n");
-        for (i = 0;  i < len;  i++)
-#if defined(SPANDSP_USE_FIXED_POINTx)
-            printf("%3d (%15.5f, %15.5f)\n", i, coeffs[i].re/4096.0f, coeffs[i].im/4096.0f);
+        printf("Training succeeded\n");
+        if ((len = v17_rx_equalizer_state(s, &coeffs)))
+        {
+            printf("Equalizer:\n");
+            for (i = 0;  i < len;  i++)
+#if defined(SPANDSP_USE_FIXED_POINT)
+                printf("%3d (%15.5f, %15.5f)\n", i, coeffs[i].re/V17_CONSTELLATION_SCALING_FACTOR, coeffs[i].im/V17_CONSTELLATION_SCALING_FACTOR);
 #else
-            printf("%3d (%15.5f, %15.5f) -> %15.5f\n", i, coeffs[i].re, coeffs[i].im, powerf(&coeffs[i]));
+                printf("%3d (%15.5f, %15.5f) -> %15.5f\n", i, coeffs[i].re, coeffs[i].im, powerf(&coeffs[i]));
 #endif
+        }
         break;
     }
 }
@@ -173,7 +171,7 @@ static int v17getbit(void *user_data)
 }
 /*- End of function --------------------------------------------------------*/
 
-#if defined(SPANDSP_USE_FIXED_POINTx)
+#if defined(SPANDSP_USE_FIXED_POINT)
 static void qam_report(void *user_data, const complexi16_t *constel, const complexi16_t *target, int symbol)
 #else
 static void qam_report(void *user_data, const complexf_t *constel, const complexf_t *target, int symbol)
@@ -181,12 +179,13 @@ static void qam_report(void *user_data, const complexf_t *constel, const complex
 {
     int i;
     int len;
-#if defined(SPANDSP_USE_FIXED_POINTx)
+#if defined(SPANDSP_USE_FIXED_POINT)
     complexi16_t *coeffs;
-    complexf_t constel_point;
 #else
     complexf_t *coeffs;
 #endif
+    complexf_t constel_point;
+    complexf_t target_point;
     float fpower;
     v17_rx_state_t *rx;
     static float smooth_power = 0.0f;
@@ -195,67 +194,56 @@ static void qam_report(void *user_data, const complexf_t *constel, const complex
     rx = (v17_rx_state_t *) user_data;
     if (constel)
     {
-        fpower = (constel->re - target->re)*(constel->re - target->re)
-               + (constel->im - target->im)*(constel->im - target->im);
-#if defined(SPANDSP_USE_FIXED_POINTx)
-        fpower /= 4096.0*4096.0;
-#endif
+        constel_point.re = constel->re/V17_CONSTELLATION_SCALING_FACTOR;
+        constel_point.im = constel->im/V17_CONSTELLATION_SCALING_FACTOR;
+        target_point.re = target->re/V17_CONSTELLATION_SCALING_FACTOR,
+        target_point.im = target->im/V17_CONSTELLATION_SCALING_FACTOR,
+        fpower = (constel_point.re - target_point.re)*(constel_point.re - target_point.re)
+               + (constel_point.im - target_point.im)*(constel_point.im - target_point.im);
         smooth_power = 0.95f*smooth_power + 0.05f*fpower;
 #if defined(ENABLE_GUI)
         if (use_gui)
         {
-#if defined(SPANDSP_USE_FIXED_POINTx)
-            constel_point.re = constel->re/4096.0;
-            constel_point.im = constel->im/4096.0;
             qam_monitor_update_constel(qam_monitor, &constel_point);
-#else
-            qam_monitor_update_constel(qam_monitor, constel);
-#endif
             qam_monitor_update_carrier_tracking(qam_monitor, v17_rx_carrier_frequency(rx));
             qam_monitor_update_symbol_tracking(qam_monitor, v17_rx_symbol_timing_correction(rx));
         }
 #endif
         printf("%8d [%8.4f, %8.4f] [%8.4f, %8.4f] %2x %8.4f %8.4f %9.4f %7.3f %7.4f\n",
                symbol_no,
-#if defined(SPANDSP_USE_FIXED_POINTx)
-               constel->re/4096.0,
-               constel->im/4096.0,
-               target->re/4096.0,
-               target->im/4096.0,
-#else
-               constel->re,
-               constel->im,
-               target->re,
-               target->im,
-#endif
+               constel_point.re,
+               constel_point.im,
+               target_point.re,
+               target_point.im,
                symbol,
                fpower,
                smooth_power,
                v17_rx_carrier_frequency(rx),
                v17_rx_signal_power(rx),
                v17_rx_symbol_timing_correction(rx));
-        printf("Carrier %d %f %f\n", symbol_no, v17_rx_carrier_frequency(rx), v17_rx_symbol_timing_correction(rx));
         symbol_no++;
         if (--update_interval <= 0)
         {
-            len = v17_rx_equalizer_state(rx, &coeffs);
-            printf("Equalizer A:\n");
-            for (i = 0;  i < len;  i++)
-#if defined(SPANDSP_USE_FIXED_POINTx)
-                printf("%3d (%15.5f, %15.5f)\n", i, coeffs[i].re/4096.0f, coeffs[i].im/4096.0f);
+            if ((len = v17_rx_equalizer_state(rx, &coeffs)))
+            {
+                printf("Equalizer A:\n");
+                for (i = 0;  i < len;  i++)
+#if defined(SPANDSP_USE_FIXED_POINT)
+                    printf("%3d (%15.5f, %15.5f)\n", i, coeffs[i].re/V17_CONSTELLATION_SCALING_FACTOR, coeffs[i].im/V17_CONSTELLATION_SCALING_FACTOR);
 #else
-                printf("%3d (%15.5f, %15.5f) -> %15.5f\n", i, coeffs[i].re, coeffs[i].im, powerf(&coeffs[i]));
+                    printf("%3d (%15.5f, %15.5f) -> %15.5f\n", i, coeffs[i].re, coeffs[i].im, powerf(&coeffs[i]));
 #endif
 #if defined(ENABLE_GUI)
-            if (use_gui)
-            {
-#if defined(SPANDSP_USE_FIXED_POINTx)
-                qam_monitor_update_int_equalizer(qam_monitor, coeffs, len);
+                if (use_gui)
+                {
+#if defined(SPANDSP_USE_FIXED_POINT)
+                    qam_monitor_update_int_equalizer(qam_monitor, coeffs, len);
 #else
-                qam_monitor_update_equalizer(qam_monitor, coeffs, len);
+                    qam_monitor_update_equalizer(qam_monitor, coeffs, len);
+#endif
+                }
 #endif
             }
-#endif
             update_interval = 100;
         }
     }
@@ -331,29 +319,29 @@ int main(int argc, char *argv[])
     SNDFILE *outhandle;
     int outframes;
     int samples;
-    int tep;
     int block_no;
     int noise_level;
     int signal_level;
     int bits_per_test;
     int line_model_no;
-    int log_audio;
     int channel_codec;
     int rbs_pattern;
     int opt;
+    bool tep;
+    bool log_audio;
     logging_state_t *logging;
 
     channel_codec = MUNGE_CODEC_NONE;
     rbs_pattern = 0;
     test_bps = 14400;
-    tep = FALSE;
+    tep = false;
     line_model_no = 0;
     decode_test_file = NULL;
-    use_gui = FALSE;
+    use_gui = false;
     noise_level = -70;
     signal_level = -13;
     bits_per_test = 50000;
-    log_audio = FALSE;
+    log_audio = false;
     while ((opt = getopt(argc, argv, "b:B:c:d:glm:n:r:s:t")) != -1)
     {
         switch (opt)
@@ -386,14 +374,14 @@ int main(int argc, char *argv[])
             break;
         case 'g':
 #if defined(ENABLE_GUI)
-            use_gui = TRUE;
+            use_gui = true;
 #else
             fprintf(stderr, "Graphical monitoring not available\n");
             exit(2);
 #endif
             break;
         case 'l':
-            log_audio = TRUE;
+            log_audio = true;
             break;
         case 'm':
             line_model_no = atoi(optarg);
@@ -408,7 +396,7 @@ int main(int argc, char *argv[])
             signal_level = atoi(optarg);
             break;
         case 't':
-            tep = TRUE;
+            tep = true;
             break;
         default:
             //usage();
@@ -451,7 +439,7 @@ int main(int argc, char *argv[])
         span_log_set_tag(logging, "V.17-tx");
         v17_tx_power(tx, signal_level);
         v17_tx_set_modem_status_handler(tx, v17_tx_status, (void *) tx);
-#if defined(WITH_SPANDSP_INTERNALS)
+#if defined(SPANDSP_EXPOSE_INTERNAL_STRUCTURES)
         /* Move the carrier off a bit */
         tx->carrier_phase_rate = dds_phase_ratef(1792.0f);
         tx->carrier_phase = 0x40000000;
@@ -481,7 +469,7 @@ int main(int argc, char *argv[])
 #if defined(ENABLE_GUI)
     if (use_gui)
     {
-        qam_monitor = qam_monitor_init(10.0f, NULL);
+        qam_monitor = qam_monitor_init(10.0f, V17_CONSTELLATION_SCALING_FACTOR, NULL);
         if (!decode_test_file)
         {
             start_line_model_monitor(129);
@@ -536,18 +524,18 @@ int main(int argc, char *argv[])
                     break;
                 }
                 memset(&latest_results, 0, sizeof(latest_results));
-#if defined(WITH_SPANDSP_INTERNALS)
+#if defined(SPANDSP_EXPOSE_INTERNAL_STRUCTURES)
                 signal_level--;
                 /* Bump the receiver AGC gain by 1dB, to compensate for the above */
                 rx->agc_scaling_save *= 1.122f;
 #endif
-                v17_tx_restart(tx, test_bps, tep, TRUE);
+                v17_tx_restart(tx, test_bps, tep, true);
                 v17_tx_power(tx, signal_level);
-                v17_rx_restart(rx, test_bps, TRUE);
+                v17_rx_restart(rx, test_bps, true);
                 //rx.eq_put_step = rand()%(192*10/3);
                 bert_init(&bert, bits_per_test, BERT_PATTERN_ITU_O152_11, test_bps, 20);
                 bert_set_report(&bert, 10000, reporter, NULL);
-                one_way_line_model_release(line_model);
+                one_way_line_model_free(line_model);
                 if ((line_model = one_way_line_model_init(line_model_no, (float) noise_level, channel_codec, 0)) == NULL)
                 {
                     fprintf(stderr, "    Failed to create line model\n");
@@ -577,7 +565,7 @@ int main(int argc, char *argv[])
         fprintf(stderr, "At completion:\n");
         fprintf(stderr, "Final result %ddBm0/%ddBm0, %d bits, %d bad bits, %d resyncs\n", signal_level, noise_level, bert_results.total_bits, bert_results.bad_bits, bert_results.resyncs);
         fprintf(stderr, "Last report  %ddBm0/%ddBm0, %d bits, %d bad bits, %d resyncs\n", signal_level, noise_level, latest_results.total_bits, latest_results.bad_bits, latest_results.resyncs);
-        one_way_line_model_release(line_model);
+        one_way_line_model_free(line_model);
 
         if (signal_level > -43)
         {
@@ -587,6 +575,9 @@ int main(int argc, char *argv[])
 
         printf("Tests passed.\n");
     }
+    v17_rx_free(rx);
+    if (tx)
+        v17_tx_free(tx);
 #if defined(ENABLE_GUI)
     if (use_gui)
         qam_wait_to_end(qam_monitor);
@@ -607,7 +598,7 @@ int main(int argc, char *argv[])
             exit(2);
         }
     }
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

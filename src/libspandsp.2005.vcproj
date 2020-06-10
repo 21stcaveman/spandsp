@@ -27,7 +27,7 @@
       <Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories=".;.\spandsp;.\msvc;..\..\tiff-3.8.2\libtiff"
+				AdditionalIncludeDirectories=".;.\spandsp;.\msvc;..\..\tiff-4.0.2\libtiff"
 				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBSPANDSP_EXPORTS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;HAVE_CONFIG_H"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -61,7 +61,7 @@
 			>
       <Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=".;.\spandsp;.\msvc;..\..\tiff-3.8.2\libtiff"
+				AdditionalIncludeDirectories=".;.\spandsp;.\msvc;..\..\tiff-4.0.2\libtiff"
 				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBSPANDSP_EXPORTS;_CRT_SECURE_NO_DEPRECATE;_CRT_NONSTDC_NO_DEPRECATE;HAVE_CONFIG_H"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
@@ -146,6 +146,8 @@
 <File RelativePath="super_tone_rx.c"></File>
 <File RelativePath="super_tone_tx.c"></File>
 <File RelativePath="swept_tone.c"></File>
+<File RelativePath="t4_t6_decode.c"></File>
+<File RelativePath="t4_t6_encode.c"></File>
 <File RelativePath="t4_rx.c"></File>
 <File RelativePath="t4_tx.c"></File>
 <File RelativePath="t30.c"></File>
@@ -157,6 +159,10 @@
 <File RelativePath="t38_gateway.c"></File>
 <File RelativePath="t38_non_ecm_buffer.c"></File>
 <File RelativePath="t38_terminal.c"></File>
+<File RelativePath="t42.c"></File>
+<File RelativePath="t81_t82_arith_coding.c"></File>
+<File RelativePath="t85_decode.c"></File>
+<File RelativePath="t85_encode.c"></File>
 <File RelativePath="testcpuid.c"></File>
 <File RelativePath="time_scale.c"></File>
 <File RelativePath="timezone.c"></File>
@@ -224,7 +230,6 @@
 <File RelativePath="spandsp/queue.h"></File>
 <File RelativePath="spandsp/saturated.h"></File>
 <File RelativePath="spandsp/schedule.h"></File>
-<File RelativePath="spandsp/stdbool.h"></File>
 <File RelativePath="spandsp/sig_tone.h"></File>
 <File RelativePath="spandsp/silence_gen.h"></File>
 <File RelativePath="spandsp/super_tone_rx.h"></File>
@@ -244,6 +249,9 @@
 <File RelativePath="spandsp/t4_tx.h"></File>
 <File RelativePath="spandsp/t4_t6_decode.h"></File>
 <File RelativePath="spandsp/t4_t6_encode.h"></File>
+<File RelativePath="spandsp/t42.h"></File>
+<File RelativePath="spandsp/t81_t82_arith_coding.h"></File>
+<File RelativePath="spandsp/t85.h"></File>
 <File RelativePath="spandsp/telephony.h"></File>
 <File RelativePath="spandsp/time_scale.h"></File>
 <File RelativePath="spandsp/timezone.h"></File>
@@ -308,6 +316,9 @@
 <File RelativePath="spandsp/private/t4_tx.h"></File>
 <File RelativePath="spandsp/private/t4_t6_decode.h"></File>
 <File RelativePath="spandsp/private/t4_t6_encode.h"></File>
+<File RelativePath="spandsp/private/t42.h"></File>
+<File RelativePath="spandsp/private/t81_t82_arith_coding.h"></File>
+<File RelativePath="spandsp/private/t85.h"></File>
 <File RelativePath="spandsp/private/time_scale.h"></File>
 <File RelativePath="spandsp/private/timezone.h"></File>
 <File RelativePath="spandsp/private/tone_detect.h"></File>

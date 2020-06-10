@@ -111,12 +111,21 @@ typedef struct
     /*! \brief The coefficients for the single bi-quad flat mode filter. */
     const sig_tone_flat_coeffs_t *flat;
 
+#if defined(SPANDSP_USE_FIXED_POINT)
     /*! \brief Minimum signalling tone to total power ratio, in dB */
     int16_t detection_ratio;
     /*! \brief Minimum total power for detection in sharp mode, in dB */
     int16_t sharp_detection_threshold;
     /*! \brief Minimum total power for detection in flat mode, in dB */
     int16_t flat_detection_threshold;
+#else
+    /*! \brief Minimum signalling tone to total power ratio, in dB */
+    float detection_ratio;
+    /*! \brief Minimum total power for detection in sharp mode, in dB */
+    float sharp_detection_threshold;
+    /*! \brief Minimum total power for detection in flat mode, in dB */
+    float flat_detection_threshold;
+#endif
 } sig_tone_descriptor_t;
 
 /*!
@@ -210,15 +219,15 @@ struct sig_tone_rx_state_s
     /*! \brief The minimum ratio between notched power and total power for detection */
     int32_t detection_ratio;
 
-    /*! \brief TRUE if in flat mode. FALSE if in sharp mode. */
-    int flat_mode;
-    /*! \brief TRUE if the notch filter is enabled in the media path */
-    int notch_enabled;
+    /*! \brief True if in flat mode. False if in sharp mode. */
+    bool flat_mode;
+    /*! \brief True if the notch filter is enabled in the media path */
+    bool notch_enabled;
     /*! \brief ??? */
     int flat_mode_timeout;
     /*! \brief ??? */
     int notch_insertion_timeout;
-    
+
     /*! \brief ??? */
     int signalling_state;
     /*! \brief ??? */

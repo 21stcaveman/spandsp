@@ -39,9 +39,15 @@
 #if defined(HAVE_MATH_H)
 #include <math.h>
 #endif
+#if defined(HAVE_STDBOOL_H)
+#include <stdbool.h>
+#else
+#include "spandsp/stdbool.h"
+#endif
 #include "floating_fudge.h"
 
 #include "spandsp/telephony.h"
+#include "spandsp/alloc.h"
 #include "spandsp/fast_convert.h"
 #include "spandsp/logging.h"
 #include "spandsp/complex.h"
@@ -53,55 +59,60 @@
 #include "spandsp/dds.h"
 #include "spandsp/power_meter.h"
 
+#if defined(SPANDSP_USE_FIXED_POINT)
+#define SPANDSP_USE_FIXED_POINTx
+#endif
+
 #include "spandsp/v17tx.h"
 
 #include "spandsp/private/logging.h"
 #include "spandsp/private/v17tx.h"
 
 #if defined(SPANDSP_USE_FIXED_POINT)
-#define SPANDSP_USE_FIXED_POINTx
+#define FP_SCALE(x)                     ((int16_t) x)
+#else
+#define FP_SCALE(x)                     (x)
 #endif
+
+#define FP_CONSTELLATION_SCALE(x)       FP_SCALE(x)
 
 #include "v17_v32bis_tx_constellation_maps.h"
-#if defined(SPANDSP_USE_FIXED_POINT)
-#include "v17_v32bis_tx_fixed_rrc.h"
-#else
-#include "v17_v32bis_tx_floating_rrc.h"
-#endif
+#include "v17_v32bis_tx_rrc.h"
 
 /*! The nominal frequency of the carrier, in Hertz */
-#define CARRIER_NOMINAL_FREQ        1800.0f
+#define CARRIER_NOMINAL_FREQ            1800.0f
 
 /* Segments of the training sequence */
 /*! The start of the optional TEP, that may preceed the actual training, in symbols */
-#define V17_TRAINING_SEG_TEP_A      0
+#define V17_TRAINING_SEG_TEP_A          0
 /*! The mid point of the optional TEP, that may preceed the actual training, in symbols */
-#define V17_TRAINING_SEG_TEP_B      (V17_TRAINING_SEG_TEP_A + 480)
+#define V17_TRAINING_SEG_TEP_B          (V17_TRAINING_SEG_TEP_A + 480)
 /*! The start of training segment 1, in symbols */
-#define V17_TRAINING_SEG_1          (V17_TRAINING_SEG_TEP_B + 48)
+#define V17_TRAINING_SEG_1              (V17_TRAINING_SEG_TEP_B + 48)
 /*! The start of training segment 2, in symbols */
-#define V17_TRAINING_SEG_2          (V17_TRAINING_SEG_1 + 256)
+#define V17_TRAINING_SEG_2              (V17_TRAINING_SEG_1 + 256)
 /*! The start of training segment 3, in symbols */
-#define V17_TRAINING_SEG_3          (V17_TRAINING_SEG_2 + 2976)
+#define V17_TRAINING_SEG_3              (V17_TRAINING_SEG_2 + 2976)
 /*! The start of training segment 4, in symbols */
-#define V17_TRAINING_SEG_4          (V17_TRAINING_SEG_3 + 64)
+#define V17_TRAINING_SEG_4              (V17_TRAINING_SEG_3 + 64)
 /*! The start of training segment 4 in short training mode, in symbols */
-#define V17_TRAINING_SHORT_SEG_4    (V17_TRAINING_SEG_2 + 38)
+#define V17_TRAINING_SHORT_SEG_4        (V17_TRAINING_SEG_2 + 38)
 /*! The end of the training, in symbols */
-#define V17_TRAINING_END            (V17_TRAINING_SEG_4 + 48)
-#define V17_TRAINING_SHUTDOWN_A     (V17_TRAINING_END + 32)
+#define V17_TRAINING_END                (V17_TRAINING_SEG_4 + 48)
+#define V17_TRAINING_SHUTDOWN_A         (V17_TRAINING_END + 32)
 /*! The end of the shutdown sequence, in symbols */
-#define V17_TRAINING_SHUTDOWN_END   (V17_TRAINING_SHUTDOWN_A + 48)
+#define V17_TRAINING_SHUTDOWN_END       (V17_TRAINING_SHUTDOWN_A + 48)
 
 /*! The 16 bit pattern used in the bridge section of the training sequence */
-#define V17_BRIDGE_WORD             0x8880
+#define V17_BRIDGE_WORD                 0x8880
 
 static __inline__ int scramble(v17_tx_state_t *s, int in_bit)
 {
     int out_bit;
 
-    //out_bit = (in_bit ^ (s->scramble_reg >> s->scrambler_tap) ^ (s->scramble_reg >> (23 - 1))) & 1;
-    out_bit = (in_bit ^ (s->scramble_reg >> (18 - 1)) ^ (s->scramble_reg >> (23 - 1))) & 1;
+    /* One of the scrambler taps is a variable, so it can be adjusted for caller or answerer operation
+       when used for V.32bis. */
+    out_bit = (in_bit ^ (s->scramble_reg >> s->scrambler_tap) ^ (s->scramble_reg >> (23 - 1))) & 1;
     s->scramble_reg = (s->scramble_reg << 1) | out_bit;
     return out_bit;
 }
@@ -230,6 +241,11 @@ static __inline__ complexf_t getbaud(v17_tx_state_t *s)
     int i;
     int bit;
     int bits;
+#if defined(SPANDSP_USE_FIXED_POINT)
+    static const complexi16_t zero = {0, 0};
+#else
+    static const complexf_t zero = {0.0f, 0.0f};
+#endif
 
     if (s->in_training)
     {
@@ -243,7 +259,7 @@ static __inline__ complexf_t getbaud(v17_tx_state_t *s)
             {
                 /* Training finished - commence normal operation. */
                 s->current_get_bit = s->get_bit;
-                s->in_training = FALSE;
+                s->in_training = false;
             }
         }
         else
@@ -252,11 +268,7 @@ static __inline__ complexf_t getbaud(v17_tx_state_t *s)
             {
                 /* The shutdown sequence is 32 bauds of all 1's, then 48 bauds
                    of silence */
-#if defined(SPANDSP_USE_FIXED_POINT)
-                return complex_seti16(0, 0);
-#else
-                return complex_setf(0.0f, 0.0f);
-#endif
+                return zero;
             }
             if (s->training_step == V17_TRAINING_SHUTDOWN_END)
             {
@@ -275,7 +287,7 @@ static __inline__ complexf_t getbaud(v17_tx_state_t *s)
             if (s->status_handler)
                 s->status_handler(s->status_user_data, SIG_STATUS_END_OF_DATA);
             s->current_get_bit = fake_get_bit;
-            s->in_training = TRUE;
+            s->in_training = true;
             bit = 1;
         }
         bits |= (scramble(s, bit) << i);
@@ -284,16 +296,19 @@ static __inline__ complexf_t getbaud(v17_tx_state_t *s)
 }
 /*- End of function --------------------------------------------------------*/
 
-SPAN_DECLARE_NONSTD(int) v17_tx(v17_tx_state_t *s, int16_t amp[], int len)
+SPAN_DECLARE(int) v17_tx(v17_tx_state_t *s, int16_t amp[], int len)
 {
 #if defined(SPANDSP_USE_FIXED_POINT)
-    complexi_t x;
-    complexi_t z;
+    complexi16_t v;
+    complexi32_t x;
+    complexi32_t z;
+    int16_t iamp;
 #else
+    complexf_t v;
     complexf_t x;
     complexf_t z;
+    float famp;
 #endif
-    int i;
     int sample;
 
     if (s->training_step >= V17_TRAINING_SHUTDOWN_END)
@@ -306,37 +321,30 @@ SPAN_DECLARE_NONSTD(int) v17_tx(v17_tx_state_t *s, int16_t amp[], int len)
         if ((s->baud_phase += 3) >= 10)
         {
             s->baud_phase -= 10;
-            s->rrc_filter[s->rrc_filter_step] =
-            s->rrc_filter[s->rrc_filter_step + V17_TX_FILTER_STEPS] = getbaud(s);
+            v = getbaud(s);
+            s->rrc_filter_re[s->rrc_filter_step] = v.re;
+            s->rrc_filter_im[s->rrc_filter_step] = v.im;
             if (++s->rrc_filter_step >= V17_TX_FILTER_STEPS)
                 s->rrc_filter_step = 0;
         }
-        /* Root raised cosine pulse shaping at baseband */
 #if defined(SPANDSP_USE_FIXED_POINT)
-        x = complex_seti(0, 0);
-        for (i = 0;  i < V17_TX_FILTER_STEPS;  i++)
-        {
-            x.re += (int32_t) tx_pulseshaper[TX_PULSESHAPER_COEFF_SETS - 1 - s->baud_phase][i]*(int32_t) s->rrc_filter[i + s->rrc_filter_step].re;
-            x.im += (int32_t) tx_pulseshaper[TX_PULSESHAPER_COEFF_SETS - 1 - s->baud_phase][i]*(int32_t) s->rrc_filter[i + s->rrc_filter_step].im;
-        }
+        /* Root raised cosine pulse shaping at baseband */
+        x.re = vec_circular_dot_prodi16(s->rrc_filter_re, tx_pulseshaper[TX_PULSESHAPER_COEFF_SETS - 1 - s->baud_phase], V17_TX_FILTER_STEPS, s->rrc_filter_step) >> 4;
+        x.im = vec_circular_dot_prodi16(s->rrc_filter_im, tx_pulseshaper[TX_PULSESHAPER_COEFF_SETS - 1 - s->baud_phase], V17_TX_FILTER_STEPS, s->rrc_filter_step) >> 4;
         /* Now create and modulate the carrier */
-        x.re >>= 4;
-        x.im >>= 4;
-        z = dds_complexi(&s->carrier_phase, s->carrier_phase_rate);
+        z = dds_complexi32(&s->carrier_phase, s->carrier_phase_rate);
+        iamp = ((int32_t) x.re*z.re - x.im*z.im) >> 15;
         /* Don't bother saturating. We should never clip. */
-        i = (x.re*z.re - x.im*z.im) >> 15;
-        amp[sample] = (int16_t) ((i*s->gain) >> 15);
+        amp[sample] = (int16_t) (((int32_t) iamp*s->gain) >> 11);
 #else
-        x = complex_setf(0.0f, 0.0f);
-        for (i = 0;  i < V17_TX_FILTER_STEPS;  i++)
-        {
-            x.re += tx_pulseshaper[TX_PULSESHAPER_COEFF_SETS - 1 - s->baud_phase][i]*s->rrc_filter[i + s->rrc_filter_step].re;
-            x.im += tx_pulseshaper[TX_PULSESHAPER_COEFF_SETS - 1 - s->baud_phase][i]*s->rrc_filter[i + s->rrc_filter_step].im;
-        }
+        /* Root raised cosine pulse shaping at baseband */
+        x.re = vec_circular_dot_prodf(s->rrc_filter_re, tx_pulseshaper[TX_PULSESHAPER_COEFF_SETS - 1 - s->baud_phase], V17_TX_FILTER_STEPS, s->rrc_filter_step);
+        x.im = vec_circular_dot_prodf(s->rrc_filter_im, tx_pulseshaper[TX_PULSESHAPER_COEFF_SETS - 1 - s->baud_phase], V17_TX_FILTER_STEPS, s->rrc_filter_step);
         /* Now create and modulate the carrier */
         z = dds_complexf(&s->carrier_phase, s->carrier_phase_rate);
+        famp = x.re*z.re - x.im*z.im;
         /* Don't bother saturating. We should never clip. */
-        amp[sample] = (int16_t) lfastrintf((x.re*z.re - x.im*z.im)*s->gain);
+        amp[sample] = (int16_t) lfastrintf(famp*s->gain);
 #endif
     }
     return sample;
@@ -345,12 +353,15 @@ SPAN_DECLARE_NONSTD(int) v17_tx(v17_tx_state_t *s, int16_t amp[], int len)
 
 SPAN_DECLARE(void) v17_tx_power(v17_tx_state_t *s, float power)
 {
+    float gain;
+
     /* The constellation design seems to keep the average power the same, regardless
        of which bit rate is in use. */
+    gain = 0.223f*powf(10.0f, (power - DBM0_MAX_POWER)/20.0f)*32768.0f/TX_PULSESHAPER_GAIN;
 #if defined(SPANDSP_USE_FIXED_POINT)
-    s->gain = 0.223f*powf(10.0f, (power - DBM0_MAX_POWER)/20.0f)*16.0f*(32767.0f/30672.52f)*32768.0f/TX_PULSESHAPER_GAIN;
+    s->gain = (int16_t) gain;
 #else
-    s->gain = 0.223f*powf(10.0f, (power - DBM0_MAX_POWER)/20.0f)*32768.0f/TX_PULSESHAPER_GAIN;
+    s->gain = gain;
 #endif
 }
 /*- End of function --------------------------------------------------------*/
@@ -377,7 +388,7 @@ SPAN_DECLARE(logging_state_t *) v17_tx_get_logging_state(v17_tx_state_t *s)
 }
 /*- End of function --------------------------------------------------------*/
 
-SPAN_DECLARE(int) v17_tx_restart(v17_tx_state_t *s, int bit_rate, int tep, int short_train)
+SPAN_DECLARE(int) v17_tx_restart(v17_tx_state_t *s, int bit_rate, bool tep, bool short_train)
 {
     switch (bit_rate)
     {
@@ -410,14 +421,16 @@ SPAN_DECLARE(int) v17_tx_restart(v17_tx_state_t *s, int bit_rate, int tep, int s
     /* NB: some modems seem to use 3 instead of 1 for long training */
     s->diff = (short_train)  ?  0  :  1;
 #if defined(SPANDSP_USE_FIXED_POINT)
-    cvec_zeroi16(s->rrc_filter, sizeof(s->rrc_filter)/sizeof(s->rrc_filter[0]));
+    vec_zeroi16(s->rrc_filter_re, sizeof(s->rrc_filter_re)/sizeof(s->rrc_filter_re[0]));
+    vec_zeroi16(s->rrc_filter_im, sizeof(s->rrc_filter_im)/sizeof(s->rrc_filter_im[0]));
 #else
-    cvec_zerof(s->rrc_filter, sizeof(s->rrc_filter)/sizeof(s->rrc_filter[0]));
+    vec_zerof(s->rrc_filter_re, sizeof(s->rrc_filter_re)/sizeof(s->rrc_filter_re[0]));
+    vec_zerof(s->rrc_filter_im, sizeof(s->rrc_filter_im)/sizeof(s->rrc_filter_im[0]));
 #endif
     s->rrc_filter_step = 0;
     s->convolution = 0;
     s->scramble_reg = 0x2ECDD5;
-    s->in_training = TRUE;
+    s->in_training = true;
     s->short_train = short_train;
     s->training_step = (tep)  ?  V17_TRAINING_SEG_TEP_A  :  V17_TRAINING_SEG_1;
     s->carrier_phase = 0;
@@ -428,7 +441,7 @@ SPAN_DECLARE(int) v17_tx_restart(v17_tx_state_t *s, int bit_rate, int tep, int s
 }
 /*- End of function --------------------------------------------------------*/
 
-SPAN_DECLARE(v17_tx_state_t *) v17_tx_init(v17_tx_state_t *s, int bit_rate, int tep, get_bit_func_t get_bit, void *user_data)
+SPAN_DECLARE(v17_tx_state_t *) v17_tx_init(v17_tx_state_t *s, int bit_rate, bool tep, get_bit_func_t get_bit, void *user_data)
 {
     switch (bit_rate)
     {
@@ -444,7 +457,7 @@ SPAN_DECLARE(v17_tx_state_t *) v17_tx_init(v17_tx_state_t *s, int bit_rate, int 
     }
     if (s == NULL)
     {
-        if ((s = (v17_tx_state_t *) malloc(sizeof(*s))) == NULL)
+        if ((s = (v17_tx_state_t *) span_alloc(sizeof(*s))) == NULL)
             return NULL;
     }
     memset(s, 0, sizeof(*s));
@@ -452,10 +465,10 @@ SPAN_DECLARE(v17_tx_state_t *) v17_tx_init(v17_tx_state_t *s, int bit_rate, int 
     span_log_set_protocol(&s->logging, "V.17 TX");
     s->get_bit = get_bit;
     s->get_bit_user_data = user_data;
-    //s->scrambler_tap = 18 - 1;
+    s->scrambler_tap = 18 - 1;
     s->carrier_phase_rate = dds_phase_ratef(CARRIER_NOMINAL_FREQ);
     v17_tx_power(s, -14.0f);
-    v17_tx_restart(s, bit_rate, tep, FALSE);
+    v17_tx_restart(s, bit_rate, tep, false);
     return s;
 }
 /*- End of function --------------------------------------------------------*/
@@ -468,7 +481,7 @@ SPAN_DECLARE(int) v17_tx_release(v17_tx_state_t *s)
 
 SPAN_DECLARE(int) v17_tx_free(v17_tx_state_t *s)
 {
-    free(s);
+    span_free(s);
     return 0;
 }
 /*- End of function --------------------------------------------------------*/

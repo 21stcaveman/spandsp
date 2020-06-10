@@ -34,9 +34,11 @@ enum
     FAX_MODEM_FLUSH = 0,
     FAX_MODEM_SILENCE_TX,
     FAX_MODEM_SILENCE_RX,
-    FAX_MODEM_CED_TONE,
-    FAX_MODEM_CNG_TONE,
-    FAX_MODEM_NOCNG_TONE,
+    FAX_MODEM_CED_TONE_TX,
+    FAX_MODEM_CNG_TONE_TX,
+    FAX_MODEM_NOCNG_TONE_TX,
+    FAX_MODEM_CED_TONE_RX,
+    FAX_MODEM_CNG_TONE_RX,
     FAX_MODEM_V21_TX,
     FAX_MODEM_V17_TX,
     FAX_MODEM_V27TER_TX,
@@ -44,7 +46,11 @@ enum
     FAX_MODEM_V21_RX,
     FAX_MODEM_V17_RX,
     FAX_MODEM_V27TER_RX,
-    FAX_MODEM_V29_RX
+    FAX_MODEM_V29_RX,
+#if defined(SPANDSP_SUPPORT_V34)
+    FAX_MODEM_V34_TX,
+    FAX_MODEM_V34_RX
+#endif
 };
 
 /*!
@@ -57,6 +63,9 @@ extern "C"
 {
 #endif
 
+/* TEMPORARY FUDGE */
+SPAN_DECLARE(void) fax_modems_hdlc_accept(void *user_data, const uint8_t *msg, int len, int ok);
+
 /*! Convert a FAX modem type to a short text description.
     \brief Convert a FAX modem type to a short text description.
     \param modem The modem code.
@@ -64,18 +73,40 @@ extern "C"
 SPAN_DECLARE(const char *) fax_modem_to_str(int modem);
 
 /* N.B. the following are currently a work in progress */
-SPAN_DECLARE_NONSTD(int) fax_modems_v17_v21_rx(void *user_data, const int16_t amp[], int len);
-SPAN_DECLARE_NONSTD(int) fax_modems_v27ter_v21_rx(void *user_data, const int16_t amp[], int len);
-SPAN_DECLARE_NONSTD(int) fax_modems_v29_v21_rx(void *user_data, const int16_t amp[], int len);
-SPAN_DECLARE_NONSTD(int) fax_modems_v17_v21_rx_fillin(void *user_data, int len);
-SPAN_DECLARE_NONSTD(int) fax_modems_v27ter_v21_rx_fillin(void *user_data, int len);
-SPAN_DECLARE_NONSTD(int) fax_modems_v29_v21_rx_fillin(void *user_data, int len);
+SPAN_DECLARE(int) fax_modems_v17_v21_rx(void *user_data, const int16_t amp[], int len);
+SPAN_DECLARE(int) fax_modems_v27ter_v21_rx(void *user_data, const int16_t amp[], int len);
+SPAN_DECLARE(int) fax_modems_v29_v21_rx(void *user_data, const int16_t amp[], int len);
+SPAN_DECLARE(int) fax_modems_v17_v21_rx_fillin(void *user_data, int len);
+SPAN_DECLARE(int) fax_modems_v27ter_v21_rx_fillin(void *user_data, int len);
+SPAN_DECLARE(int) fax_modems_v29_v21_rx_fillin(void *user_data, int len);
 
-SPAN_DECLARE_NONSTD(void) fax_modems_hdlc_tx_frame(void *user_data, const uint8_t *msg, int len);
+SPAN_DECLARE(void) fax_modems_hdlc_tx_frame(void *user_data, const uint8_t *msg, int len);
 
-SPAN_DECLARE(void) fax_modems_start_rx_modem(fax_modems_state_t *s, int which);
+SPAN_DECLARE(void) fax_modems_hdlc_tx_flags(fax_modems_state_t *s, int flags);
+
+SPAN_DECLARE(void) fax_modems_start_fast_modem(fax_modems_state_t *s, int which, int bit_rate, int short_train, int hdlc_mode);
+
+SPAN_DECLARE(void) fax_modems_start_slow_modem(fax_modems_state_t *s, int which);
 
 SPAN_DECLARE(void) fax_modems_set_tep_mode(fax_modems_state_t *s, int use_tep);
+
+SPAN_DECLARE(void) fax_modems_set_put_bit(fax_modems_state_t *s, put_bit_func_t put_bit, void *user_data);
+
+SPAN_DECLARE(void) fax_modems_set_get_bit(fax_modems_state_t *s, get_bit_func_t get_bit, void *user_data);
+
+SPAN_DECLARE(void) fax_modems_set_rx_handler(fax_modems_state_t *s,
+                                             span_rx_handler_t rx_handler,
+                                             void *rx_user_data,
+                                             span_rx_fillin_handler_t rx_fillin_handler,
+                                             void *rx_fillin_user_data);
+
+SPAN_DECLARE(void) fax_modems_set_rx_active(fax_modems_state_t *s, int active);
+
+SPAN_DECLARE(void) fax_modems_set_tx_handler(fax_modems_state_t *s, span_tx_handler_t handler, void *user_data);
+
+SPAN_DECLARE(void) fax_modems_set_next_tx_handler(fax_modems_state_t *s, span_tx_handler_t handler, void *user_data);
+
+SPAN_DECLARE(int) fax_modems_set_next_tx_type(fax_modems_state_t *s);
 
 SPAN_DECLARE(int) fax_modems_restart(fax_modems_state_t *s);
 

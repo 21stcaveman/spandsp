@@ -17,7 +17,7 @@
 
 run_tsb85_test()
 {
-    rm -f fax_tests_1.tif
+    rm -f tsb85_tests.tif
     echo ./tsb85_tests ${TEST}
     ./tsb85_tests ${TEST} 2>xyzzy2
     RETVAL=$?

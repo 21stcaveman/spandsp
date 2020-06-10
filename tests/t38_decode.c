@@ -25,9 +25,6 @@
 
 /*! \file */
 
-/* Enable the following definition to enable direct probing into the FAX structures */
-//#define WITH_SPANDSP_INTERNALS
-
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -43,10 +40,6 @@
 #if !defined(_WIN32)
 #include <unistd.h>
 #endif
-
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
 
 #include "udptl.h"
 #include "spandsp.h"
@@ -72,32 +65,36 @@ static SNDFILE *wave_handle;
 
 static int log_audio;
 static int use_transmit_on_idle;
-static int done = FALSE;
+static int done = false;
 
-static int started = FALSE;
+static int started = false;
 static int64_t current = 0;
 
-static int phase_b_handler(t30_state_t *s, void *user_data, int result)
+static int phase_b_handler(void *user_data, int result)
 {
-    int i;
+    int ch;
+    t30_state_t *s;
     char tag[20];
 
-    i = (int) (intptr_t) user_data;
-    snprintf(tag, sizeof(tag), "%c: Phase B", i);
-    printf("%c: Phase B handler on channel %c - (0x%X) %s\n", i, i, result, t30_frametype(result));
+    ch = 'A';
+    s = (t30_state_t *) user_data;
+    snprintf(tag, sizeof(tag), "%c: Phase B", ch);
+    printf("%c: Phase B handler on channel %c - (0x%X) %s\n", ch, ch, result, t30_frametype(result));
     fax_log_rx_parameters(s, tag);
     return T30_ERR_OK;
 }
 /*- End of function --------------------------------------------------------*/
 
-static int phase_d_handler(t30_state_t *s, void *user_data, int result)
+static int phase_d_handler(void *user_data, int result)
 {
-    int i;
+    int ch;
+    t30_state_t *s;
     char tag[20];
 
-    i = (int) (intptr_t) user_data;
-    snprintf(tag, sizeof(tag), "%c: Phase D", i);
-    printf("%c: Phase D handler on channel %c - (0x%X) %s\n", i, i, result, t30_frametype(result));
+    ch = 'A';
+    s = (t30_state_t *) user_data;
+    snprintf(tag, sizeof(tag), "%c: Phase D", ch);
+    printf("%c: Phase D handler on channel %c - (0x%X) %s\n", ch, ch, result, t30_frametype(result));
     fax_log_page_transfer_statistics(s, tag);
     fax_log_tx_parameters(s, tag);
     fax_log_rx_parameters(s, tag);
@@ -105,15 +102,17 @@ static int phase_d_handler(t30_state_t *s, void *user_data, int result)
 }
 /*- End of function --------------------------------------------------------*/
 
-static void phase_e_handler(t30_state_t *s, void *user_data, int result)
+static void phase_e_handler(void *user_data, int result)
 {
-    int i;
+    int ch;
     t30_stats_t t;
+    t30_state_t *s;
     char tag[20];
 
-    i = (int) (intptr_t) user_data;
-    snprintf(tag, sizeof(tag), "%c: Phase E", i);
-    printf("%c: Phase E handler on channel %c - (%d) %s\n", i, i, result, t30_completion_code_to_str(result));
+    ch = 'A';
+    s = (t30_state_t *) user_data;
+    snprintf(tag, sizeof(tag), "%c: Phase E", ch);
+    printf("%c: Phase E handler on channel %c - (%d) %s\n", ch, ch, result, t30_completion_code_to_str(result));
     fax_log_final_transfer_statistics(s, tag);
     fax_log_tx_parameters(s, tag);
     fax_log_rx_parameters(s, tag);
@@ -231,7 +230,7 @@ static int t38_gateway_timing_update(void *user_data, struct timeval *ts)
         }
         if (t38_gateway_rx(t38_gateway_state, t30_amp, t30_len))
             break;
-    
+
         t38_len = t38_gateway_tx(t38_gateway_state, t38_amp, partial);
         if (!use_transmit_on_idle)
         {
@@ -270,7 +269,7 @@ static int ifp_handler(void *user_data, const uint8_t msg[], int len, int seq_no
 {
     int i;
 
-    started = TRUE;
+    started = true;
 
     printf("%5d >>> ", seq_no);
     for (i = 0;  i < len;  i++)
@@ -302,7 +301,7 @@ static uint32_t parse_inet_addr(const char *s)
     uint32_t b;
     uint32_t c;
     uint32_t d;
-    
+
     a = 0;
     b = 0;
     c = 0;
@@ -326,6 +325,7 @@ int main(int argc, char *argv[])
     t30_state_t *t30;
     logging_state_t *logging;
     const char *input_file_name;
+    const char *input_tiff_file_name;
     int t38_version;
     int caller;
     int use_ecm;
@@ -340,27 +340,28 @@ int main(int argc, char *argv[])
     uint32_t dest_addr;
     uint16_t dest_port;
 
-    caller = FALSE;
-    use_ecm = FALSE;
+    caller = false;
+    use_ecm = false;
     t38_version = 0;
     options = 0;
     input_file_name = INPUT_FILE_NAME;
-    fill_removal = FALSE;
-    use_tep = FALSE;
-    use_transmit_on_idle = TRUE;
+    input_tiff_file_name = INPUT_TIFF_FILE_NAME;
+    fill_removal = false;
+    use_tep = false;
+    use_transmit_on_idle = true;
     supported_modems = T30_SUPPORT_V27TER | T30_SUPPORT_V29 | T30_SUPPORT_V17;
-    t38_terminal_operation = TRUE;
-    log_audio = FALSE;
+    t38_terminal_operation = true;
+    log_audio = false;
     src_addr = 0;
     src_port = 0;
     dest_addr = 0;
     dest_port = 0;
-    while ((opt = getopt(argc, argv, "cD:d:eFGi:lm:oS:s:tv:")) != -1)
+    while ((opt = getopt(argc, argv, "cD:d:eFGi:lm:oS:s:T:tv:")) != -1)
     {
         switch (opt)
         {
         case 'c':
-            caller = TRUE;
+            caller = true;
             break;
         case 'D':
             dest_addr = parse_inet_addr(optarg);
@@ -369,19 +370,19 @@ int main(int argc, char *argv[])
             dest_port = atoi(optarg);
             break;
         case 'e':
-            use_ecm = TRUE;
+            use_ecm = true;
             break;
         case 'F':
-            fill_removal = TRUE;
+            fill_removal = true;
             break;
         case 'G':
-            t38_terminal_operation = FALSE;
+            t38_terminal_operation = false;
             break;
         case 'i':
             input_file_name = optarg;
             break;
         case 'l':
-            log_audio = TRUE;
+            log_audio = true;
             break;
         case 'm':
             supported_modems = atoi(optarg);
@@ -395,8 +396,11 @@ int main(int argc, char *argv[])
         case 's':
             src_port = atoi(optarg);
             break;
+        case 'T':
+            input_tiff_file_name = optarg;
+            break;
         case 't':
-            use_tep = TRUE;
+            use_tep = true;
             break;
         case 'v':
             t38_version = atoi(optarg);
@@ -440,14 +444,43 @@ int main(int argc, char *argv[])
         t30_set_tx_ident(t30, "11111111");
         t30_set_tx_nsf(t30, (const uint8_t *) "\x50\x00\x00\x00Spandsp\x00", 12);
         if (caller)
-            t30_set_tx_file(t30, INPUT_TIFF_FILE_NAME, -1, -1);
+            t30_set_tx_file(t30, input_tiff_file_name, -1, -1);
         else
             t30_set_rx_file(t30, OUTPUT_TIFF_FILE_NAME, -1);
-        t30_set_phase_b_handler(t30, phase_b_handler, (void *) (intptr_t) 'A');
-        t30_set_phase_d_handler(t30, phase_d_handler, (void *) (intptr_t) 'A');
-        t30_set_phase_e_handler(t30, phase_e_handler, (void *) (intptr_t) 'A');
+        t30_set_phase_b_handler(t30, phase_b_handler, (void *) t30);
+        t30_set_phase_d_handler(t30, phase_d_handler, (void *) t30);
+        t30_set_phase_e_handler(t30, phase_e_handler, (void *) t30);
         t30_set_ecm_capability(t30, use_ecm);
-        t30_set_supported_compressions(t30, T30_SUPPORT_T4_1D_COMPRESSION | T30_SUPPORT_T4_2D_COMPRESSION | T30_SUPPORT_T6_COMPRESSION | T30_SUPPORT_T85_COMPRESSION);
+        t30_set_supported_compressions(t30,
+                                       T4_COMPRESSION_T4_1D
+                                     | T4_COMPRESSION_T4_2D
+                                     | T4_COMPRESSION_T6
+                                     | T4_COMPRESSION_T85
+                                     | T4_COMPRESSION_T85_L0
+                                     | T4_COMPRESSION_T42_T81
+                                     | T4_COMPRESSION_COLOUR);
+        t30_set_supported_bilevel_resolutions(t30,
+                                              T4_RESOLUTION_R8_STANDARD
+                                            | T4_RESOLUTION_R8_FINE
+                                            | T4_RESOLUTION_R8_SUPERFINE
+                                            | T4_RESOLUTION_R16_SUPERFINE
+                                            | T4_RESOLUTION_200_100
+                                            | T4_RESOLUTION_200_200
+                                            | T4_RESOLUTION_200_400
+                                            | T4_RESOLUTION_300_300
+                                            | T4_RESOLUTION_300_600
+                                            | T4_RESOLUTION_400_400
+                                            | T4_RESOLUTION_400_800
+                                            | T4_RESOLUTION_600_600
+                                            | T4_RESOLUTION_600_1200
+                                            | T4_RESOLUTION_1200_1200);
+        t30_set_supported_colour_resolutions(t30,
+                                             T4_RESOLUTION_100_100
+                                           | T4_RESOLUTION_200_200
+                                           | T4_RESOLUTION_300_300
+                                           | T4_RESOLUTION_400_400
+                                           | T4_RESOLUTION_600_600
+                                           | T4_RESOLUTION_1200_1200);
 
         if (pcap_scan_pkts(input_file_name, src_addr, src_port, dest_addr, dest_port, t38_terminal_timing_update, process_packet, NULL))
             exit(2);
@@ -497,14 +530,43 @@ int main(int argc, char *argv[])
         t30_set_tx_ident(t30, "22222222");
         t30_set_tx_nsf(t30, (const uint8_t *) "\x50\x00\x00\x00Spandsp\x00", 12);
         if (caller)
-            t30_set_tx_file(t30, INPUT_TIFF_FILE_NAME, -1, -1);
+            t30_set_tx_file(t30, input_tiff_file_name, -1, -1);
         else
             t30_set_rx_file(t30, OUTPUT_TIFF_FILE_NAME, -1);
-        t30_set_phase_b_handler(t30, phase_b_handler, (void *) (intptr_t) 'B');
-        t30_set_phase_d_handler(t30, phase_d_handler, (void *) (intptr_t) 'B');
-        t30_set_phase_e_handler(t30, phase_e_handler, (void *) (intptr_t) 'B');
+        t30_set_phase_b_handler(t30, phase_b_handler, (void *) t30);
+        t30_set_phase_d_handler(t30, phase_d_handler, (void *) t30);
+        t30_set_phase_e_handler(t30, phase_e_handler, (void *) t30);
         t30_set_ecm_capability(t30, use_ecm);
-        t30_set_supported_compressions(t30, T30_SUPPORT_T4_1D_COMPRESSION | T30_SUPPORT_T4_2D_COMPRESSION | T30_SUPPORT_T6_COMPRESSION);
+        t30_set_supported_compressions(t30,
+                                       T4_COMPRESSION_T4_1D
+                                     | T4_COMPRESSION_T4_2D
+                                     | T4_COMPRESSION_T6
+                                     | T4_COMPRESSION_T85
+                                     | T4_COMPRESSION_T85_L0
+                                     | T4_COMPRESSION_T42_T81
+                                     | T4_COMPRESSION_COLOUR);
+        t30_set_supported_bilevel_resolutions(t30,
+                                              T4_RESOLUTION_R8_STANDARD
+                                            | T4_RESOLUTION_R8_FINE
+                                            | T4_RESOLUTION_R8_SUPERFINE
+                                            | T4_RESOLUTION_R16_SUPERFINE
+                                            | T4_RESOLUTION_200_100
+                                            | T4_RESOLUTION_200_200
+                                            | T4_RESOLUTION_200_400
+                                            | T4_RESOLUTION_300_300
+                                            | T4_RESOLUTION_300_600
+                                            | T4_RESOLUTION_400_400
+                                            | T4_RESOLUTION_400_800
+                                            | T4_RESOLUTION_600_600
+                                            | T4_RESOLUTION_600_1200
+                                            | T4_RESOLUTION_1200_1200);
+        t30_set_supported_colour_resolutions(t30,
+                                             T4_RESOLUTION_100_100
+                                           | T4_RESOLUTION_200_200
+                                           | T4_RESOLUTION_300_300
+                                           | T4_RESOLUTION_400_400
+                                           | T4_RESOLUTION_600_600
+                                           | T4_RESOLUTION_1200_1200);
 
         logging = fax_get_logging_state(fax_state);
         span_log_set_level(logging, SPAN_LOG_DEBUG | SPAN_LOG_SHOW_TAG | SPAN_LOG_SHOW_SAMPLE_TIME);

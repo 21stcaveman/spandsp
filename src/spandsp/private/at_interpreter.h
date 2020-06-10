@@ -80,7 +80,7 @@ struct at_state_s
     int rx_window;
     /*! Value set by +EWIND */
     int tx_window;
-    
+
     int v8bis_signal;
     int v8bis_1st_message;
     int v8bis_2nd_message;
@@ -91,6 +91,8 @@ struct at_state_s
     uint8_t rx_data[256];
     int rx_data_bytes;
 
+    int dte_dce_flow_control;
+    int dce_dte_flow_control;
     int display_call_info;
     int call_info_displayed;
     at_call_id_t *call_id;
@@ -104,20 +106,20 @@ struct at_state_s
     int command_dial;
     int ok_is_pending;
     int dte_is_waiting;
-    /*! \brief TRUE if a carrier is presnt. Otherwise FALSE. */
-    int rx_signal_present;
-    /*! \brief TRUE if a modem has trained, Otherwise FALSE. */
-    int rx_trained;
+    /*! \brief True if a carrier is present. */
+    bool rx_signal_present;
+    /*! \brief True if a modem has trained, */
+    bool rx_trained;
     int transmit;
 
     char line[256];
     int line_ptr;
 
-    at_modem_control_handler_t *modem_control_handler;
+    at_modem_control_handler_t modem_control_handler;
     void *modem_control_user_data;
-    at_tx_handler_t *at_tx_handler;
+    at_tx_handler_t at_tx_handler;
     void *at_tx_user_data;
-    at_class1_handler_t *class1_handler;
+    at_class1_handler_t class1_handler;
     void *class1_user_data;
 
     /*! \brief Error and flow logging control */

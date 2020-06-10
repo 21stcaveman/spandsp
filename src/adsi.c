@@ -49,6 +49,7 @@
 #include <assert.h>
 
 #include "spandsp/telephony.h"
+#include "spandsp/alloc.h"
 #include "spandsp/fast_convert.h"
 #include "spandsp/logging.h"
 #include "spandsp/queue.h"
@@ -68,6 +69,7 @@
 #include "spandsp/private/queue.h"
 #include "spandsp/private/tone_generate.h"
 #include "spandsp/private/async.h"
+#include "spandsp/private/power_meter.h"
 #include "spandsp/private/fsk.h"
 #include "spandsp/private/dtmf.h"
 #include "spandsp/private/adsi.h"
@@ -386,10 +388,10 @@ static void start_tx(adsi_tx_state_t *s)
         fsk_tx_init(&s->fsktx, &preset_fsk_specs[FSK_V23CH1], adsi_tx_get_bit, s);
         break;
     case ADSI_STANDARD_CLIP_DTMF:
-        dtmf_tx_init(&s->dtmftx);
+        dtmf_tx_init(&s->dtmftx, NULL, NULL);
         break;
     case ADSI_STANDARD_TDD:
-        fsk_tx_init(&s->fsktx, &preset_fsk_specs[FSK_WEITBRECHT], async_tx_get_bit, &s->asynctx);
+        fsk_tx_init(&s->fsktx, &preset_fsk_specs[FSK_WEITBRECHT_4545], async_tx_get_bit, &s->asynctx);
         async_tx_init(&s->asynctx, 5, ASYNC_PARITY_NONE, 2, false, adsi_tdd_get_async_byte, s);
         /* Schedule an explicit shift at the start of baudot transmission */
         s->baudot_shift = 2;
@@ -431,7 +433,7 @@ SPAN_DECLARE(adsi_rx_state_t *) adsi_rx_init(adsi_rx_state_t *s,
 {
     if (s == NULL)
     {
-        if ((s = (adsi_rx_state_t *) malloc(sizeof(*s))) == NULL)
+        if ((s = (adsi_rx_state_t *) span_alloc(sizeof(*s))) == NULL)
             return NULL;
     }
     memset(s, 0, sizeof(*s));
@@ -453,7 +455,7 @@ SPAN_DECLARE(adsi_rx_state_t *) adsi_rx_init(adsi_rx_state_t *s,
     case ADSI_STANDARD_TDD:
         /* TDD uses 5 bit data, no parity and 1.5 stop bits. We scan for the first stop bit, and
            ride over the fraction. */
-        fsk_rx_init(&s->fskrx, &preset_fsk_specs[FSK_WEITBRECHT], FSK_FRAME_MODE_5N1_FRAMES, adsi_tdd_put_async_byte, s);
+        fsk_rx_init(&s->fskrx, &preset_fsk_specs[FSK_WEITBRECHT_4545], FSK_FRAME_MODE_5N1_FRAMES, adsi_tdd_put_async_byte, s);
         break;
     }
     s->standard = standard;
@@ -470,7 +472,7 @@ SPAN_DECLARE(int) adsi_rx_release(adsi_rx_state_t *s)
 
 SPAN_DECLARE(int) adsi_rx_free(adsi_rx_state_t *s)
 {
-    free(s);
+    span_free(s);
     return 0;
 }
 /*- End of function --------------------------------------------------------*/
@@ -539,9 +541,11 @@ SPAN_DECLARE(void) adsi_tx_set_preamble(adsi_tx_state_t *s,
     }
     if (postamble_ones_len < 0)
     {
+#if 0
         if (s->standard == ADSI_STANDARD_JCLIP)
             s->postamble_ones_len = 5;
         else
+#endif
             s->postamble_ones_len = 5;
     }
     else
@@ -661,7 +665,7 @@ SPAN_DECLARE(adsi_tx_state_t *) adsi_tx_init(adsi_tx_state_t *s, int standard)
 {
     if (s == NULL)
     {
-        if ((s = (adsi_tx_state_t *) malloc(sizeof(*s))) == NULL)
+        if ((s = (adsi_tx_state_t *) span_alloc(sizeof(*s))) == NULL)
             return NULL;
     }
     memset(s, 0, sizeof(*s));
@@ -691,7 +695,7 @@ SPAN_DECLARE(int) adsi_tx_release(adsi_tx_state_t *s)
 
 SPAN_DECLARE(int) adsi_tx_free(adsi_tx_state_t *s)
 {
-    free(s);
+    span_free(s);
     return 0;
 }
 /*- End of function --------------------------------------------------------*/

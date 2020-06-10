@@ -41,6 +41,11 @@
 #if defined(HAVE_MATH_H)
 #include <math.h>
 #endif
+#if defined(HAVE_STDBOOL_H)
+#include <stdbool.h>
+#else
+#include "spandsp/stdbool.h"
+#endif
 #include "floating_fudge.h"
 
 #include "spandsp/telephony.h"
@@ -57,7 +62,7 @@ static void vparms(int32_t vwin[],
                    int32_t half,
                    float *dither,
                    int32_t *mintau,
-                   int32_t *zc, 
+                   int32_t *zc,
                    int32_t *lbe,
                    int32_t *fbe,
                    float *qs,
@@ -207,7 +212,7 @@ void lpc10_voicing(lpc10_encode_state_t *s,
                    const int32_t buflim[],
                    int32_t half,
                    float *minamd,
-                   float *maxamd, 
+                   float *maxamd,
                    int32_t *mintau,
                    float ivrc[],
                    int32_t obound[])
@@ -250,7 +255,7 @@ void lpc10_voicing(lpc10_encode_state_t *s,
     int32_t lbe;
     float snr2;
 
-#if (_MSC_VER >= 1400) 
+#if (_MSC_VER >= 1400)
     __analysis_assume(half >= 0  &&  half < 2);
 #endif
     inbuf_offset = 0;
@@ -305,7 +310,7 @@ void lpc10_voicing(lpc10_encode_state_t *s,
     vparms(vwin,
            &inbuf[inbuf_offset],
            &lpbuf[lpbuf_offset],
-           buflim, 
+           buflim,
            half,
            &s->dither,
            mintau,
@@ -348,11 +353,6 @@ void lpc10_voicing(lpc10_encode_state_t *s,
     /* Voicing decision for current half-frame:  1 = Voiced; 0 = Unvoiced */
     s->voibuf[3][half] = (s->voice[2][half] > 0.0f)  ?  1  :  0;
     /* Skip voicing decision smoothing in first half-frame: */
-    /* Give a value to VSTATE, so that trace statements below will print */
-    /* a consistent value from one call to the next when HALF .EQ. 1. */
-    /* The value of VSTATE is not used for any other purpose when this is */
-    /* true. */
-    vstate = -1;
     if (half != 0)
     {
         /* Voicing decision smoothing rules (override of linear combination): */

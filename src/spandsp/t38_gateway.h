@@ -38,29 +38,24 @@ to maximum the tolerance of jitter and packet loss on the IP network.
 \section t38_gateway_page_sec_2 How does it work?
 */
 
-/*! The receive buffer length */
-#define T38_RX_BUF_LEN          2048
-/*! The number of HDLC transmit buffers */
-#define T38_TX_HDLC_BUFS        256
-/*! The maximum length of an HDLC frame buffer. This must be big enough for ECM frames. */
-#define T38_MAX_HDLC_LEN        260
+/*! The maximum number of bytes to be zapped, in order to corrupt NSF,
+    NSS and NSC messages, so the receiver does not recognise them. */
+#define MAX_NSX_SUPPRESSION             10
 
 typedef struct t38_gateway_state_s t38_gateway_state_t;
 
 /*!
-    T.30 real time frame handler.
-    \brief T.30 real time frame handler.
-    \param s The T.30 context.
+    T.38 gateway real time frame handler.
+    \brief T.38 gateway real time frame handler.
     \param user_data An opaque pointer.
-    \param direction TRUE for incoming, FALSE for outgoing.
+    \param incoming True for incoming, false for outgoing.
     \param msg The HDLC message.
     \param len The length of the message.
 */
-typedef void (t38_gateway_real_time_frame_handler_t)(t38_gateway_state_t *s,
-                                                     void *user_data,
-                                                     int direction,
-                                                     const uint8_t *msg,
-                                                     int len);
+typedef void (*t38_gateway_real_time_frame_handler_t)(void *user_data,
+                                                      bool incoming,
+                                                      const uint8_t *msg,
+                                                      int len);
 
 /*!
     T.38 gateway results.
@@ -69,8 +64,8 @@ typedef struct
 {
     /*! \brief The current bit rate for image transfer. */
     int bit_rate;
-    /*! \brief TRUE if error correcting mode is used. */
-    int error_correcting_mode;
+    /*! \brief True if error correcting mode is used. */
+    bool error_correcting_mode;
     /*! \brief The number of pages transferred so far. */
     int pages_transferred;
 } t38_stats_t;
@@ -86,7 +81,7 @@ extern "C"
     \param tx_packet_user_data An opaque pointer passed to the tx_packet_handler routine.
     \return A pointer to the termination mode T.38 context, or NULL if there was a problem. */
 SPAN_DECLARE(t38_gateway_state_t *) t38_gateway_init(t38_gateway_state_t *s,
-                                                     t38_tx_packet_handler_t *tx_packet_handler,
+                                                     t38_tx_packet_handler_t tx_packet_handler,
                                                      void *tx_packet_user_data);
 
 /*! Release a gateway mode T.38 context.
@@ -107,7 +102,7 @@ SPAN_DECLARE(int) t38_gateway_free(t38_gateway_state_t *s);
     \param amp The audio sample buffer.
     \param len The number of samples in the buffer.
     \return The number of samples unprocessed. */
-SPAN_DECLARE_NONSTD(int) t38_gateway_rx(t38_gateway_state_t *s, int16_t amp[], int len);
+SPAN_DECLARE(int) t38_gateway_rx(t38_gateway_state_t *s, int16_t amp[], int len);
 
 /*! Apply fake processing when a block of audio samples is missing (e.g due
     to packet loss).
@@ -117,7 +112,7 @@ SPAN_DECLARE_NONSTD(int) t38_gateway_rx(t38_gateway_state_t *s, int16_t amp[], i
     \return The number of samples unprocessed. This should only be non-zero if
             the software has reached the end of the FAX call.
 */
-SPAN_DECLARE_NONSTD(int) t38_gateway_rx_fillin(t38_gateway_state_t *s, int len);
+SPAN_DECLARE(int) t38_gateway_rx_fillin(t38_gateway_state_t *s, int len);
 
 /*! Generate a block of FAX audio samples.
     \brief Generate a block of FAX audio samples.
@@ -126,23 +121,23 @@ SPAN_DECLARE_NONSTD(int) t38_gateway_rx_fillin(t38_gateway_state_t *s, int len);
     \param max_len The number of samples to be generated.
     \return The number of samples actually generated.
 */
-SPAN_DECLARE_NONSTD(int) t38_gateway_tx(t38_gateway_state_t *s, int16_t amp[], int max_len);
+SPAN_DECLARE(int) t38_gateway_tx(t38_gateway_state_t *s, int16_t amp[], int max_len);
 
 /*! Control whether error correcting mode (ECM) is allowed.
     \brief Control whether error correcting mode (ECM) is allowed.
     \param s The T.38 context.
-    \param ecm_allowed TRUE is ECM is to be allowed.
+    \param ecm_allowed True is ECM is to be allowed.
 */
-SPAN_DECLARE(void) t38_gateway_set_ecm_capability(t38_gateway_state_t *s, int ecm_allowed);
+SPAN_DECLARE(void) t38_gateway_set_ecm_capability(t38_gateway_state_t *s, bool ecm_allowed);
 
 /*! Select whether silent audio will be sent when transmit is idle.
     \brief Select whether silent audio will be sent when transmit is idle.
     \param s The T.38 context.
-    \param transmit_on_idle TRUE if silent audio should be output when the FAX transmitter is
-           idle. FALSE to transmit zero length audio when the FAX transmitter is idle. The default
-           behaviour is FALSE.
+    \param transmit_on_idle True if silent audio should be output when the FAX transmitter is
+           idle. False to transmit zero length audio when the FAX transmitter is idle. The default
+           behaviour is false.
 */
-SPAN_DECLARE(void) t38_gateway_set_transmit_on_idle(t38_gateway_state_t *s, int transmit_on_idle);
+SPAN_DECLARE(void) t38_gateway_set_transmit_on_idle(t38_gateway_state_t *s, bool transmit_on_idle);
 
 /*! Specify which modem types are supported by a T.30 context.
     \brief Specify supported modems.
@@ -172,16 +167,16 @@ SPAN_DECLARE(void) t38_gateway_set_nsx_suppression(t38_gateway_state_t *s,
 /*! Select whether talker echo protection tone will be sent for the image modems.
     \brief Select whether TEP will be sent for the image modems.
     \param s The T.38 context.
-    \param use_tep TRUE if TEP should be sent.
+    \param use_tep True if TEP should be sent.
 */
-SPAN_DECLARE(void) t38_gateway_set_tep_mode(t38_gateway_state_t *s, int use_tep);
+SPAN_DECLARE(void) t38_gateway_set_tep_mode(t38_gateway_state_t *s, bool use_tep);
 
 /*! Select whether non-ECM fill bits are to be removed during transmission.
     \brief Select whether non-ECM fill bits are to be removed during transmission.
     \param s The T.38 context.
-    \param remove TRUE if fill bits are to be removed.
+    \param remove True if fill bits are to be removed.
 */
-SPAN_DECLARE(void) t38_gateway_set_fill_bit_removal(t38_gateway_state_t *s, int remove);
+SPAN_DECLARE(void) t38_gateway_set_fill_bit_removal(t38_gateway_state_t *s, bool remove);
 
 /*! Get the current transfer statistics for the current T.38 session.
     \brief Get the current transfer statistics.
@@ -212,7 +207,7 @@ SPAN_DECLARE(logging_state_t *) t38_gateway_get_logging_state(t38_gateway_state_
     \param handler The callback function.
     \param user_data An opaque pointer passed to the callback function. */
 SPAN_DECLARE(void) t38_gateway_set_real_time_frame_handler(t38_gateway_state_t *s,
-                                                           t38_gateway_real_time_frame_handler_t *handler,
+                                                           t38_gateway_real_time_frame_handler_t handler,
                                                            void *user_data);
 
 #if defined(__cplusplus)

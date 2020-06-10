@@ -24,7 +24,7 @@
  * License along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
- 
+
 /*! \file */
 
 #if !defined(_SPANDSP_MODEM_CONNECT_TONES_H_)
@@ -50,7 +50,7 @@ unfiltered energy, then a large proportion of the energy must be at the notch
 frequency. This type of detector may seem less intuitive than using a narrow
 bandpass filter to isolate the energy at the notch freqency. However, a sharp
 bandpass implemented as an IIR filter rings badly. The reciprocal notch filter
-is very well behaved for our purpose. 
+is very well behaved for our purpose.
 */
 
 enum
@@ -127,9 +127,9 @@ SPAN_DECLARE(int) modem_connect_tones_tx_free(modem_connect_tones_tx_state_t *s)
     \param len The number of samples to generate.
     \return The number of samples generated.
 */
-SPAN_DECLARE_NONSTD(int) modem_connect_tones_tx(modem_connect_tones_tx_state_t *s,
-                                                int16_t amp[],
-                                                int len);
+SPAN_DECLARE(int) modem_connect_tones_tx(modem_connect_tones_tx_state_t *s,
+                                         int16_t amp[],
+                                         int len);
 
 /*! \brief Process a block of samples through an instance of the modem connect
            tones detector.
@@ -138,13 +138,22 @@ SPAN_DECLARE_NONSTD(int) modem_connect_tones_tx(modem_connect_tones_tx_state_t *
     \param len The number of samples in the array.
     \return The number of unprocessed samples.
 */
-SPAN_DECLARE_NONSTD(int) modem_connect_tones_rx(modem_connect_tones_rx_state_t *s,
-                                                const int16_t amp[],
-                                                int len);
-                             
+SPAN_DECLARE(int) modem_connect_tones_rx(modem_connect_tones_rx_state_t *s,
+                                         const int16_t amp[],
+                                         int len);
+
+/*! Fake processing of a missing block of received modem connect tone samples
+    (e.g due to packet loss).
+    \brief Fake processing of a missing block of received modem connect tone samples.
+    \param s The context.
+    \param len The number of samples to fake.
+    \return The number of samples unprocessed.
+*/
+SPAN_DECLARE(int) modem_connect_tones_rx_fillin(modem_connect_tones_rx_state_t *s, int len);
+
 /*! \brief Test if a modem_connect tone has been detected.
     \param s The context.
-    \return TRUE if tone is detected, else FALSE.
+    \return The code for the detected tone.
 */
 SPAN_DECLARE(int) modem_connect_tones_rx_get(modem_connect_tones_rx_state_t *s);
 

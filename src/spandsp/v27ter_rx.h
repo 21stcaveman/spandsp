@@ -44,6 +44,12 @@ at the start of transmission, which makes the design of a V.27ter receiver relat
 straightforward.
 */
 
+#if defined(SPANDSP_USE_FIXED_POINT)
+#define V27TER_CONSTELLATION_SCALING_FACTOR     1024.0
+#else
+#define V27TER_CONSTELLATION_SCALING_FACTOR     1.0
+#endif
+
 /*!
     V.27ter modem receive side descriptor. This defines the working state for a
     single instance of a V.27ter modem receiver.
@@ -68,9 +74,9 @@ SPAN_DECLARE(v27ter_rx_state_t *) v27ter_rx_init(v27ter_rx_state_t *s, int bit_r
     \brief Reinitialise an existing V.27ter modem receive context.
     \param s The modem context.
     \param bit_rate The bit rate of the modem. Valid values are 2400 and 4800.
-    \param old_train TRUE if a previous trained values are to be reused.
+    \param old_train True if a previous trained values are to be reused.
     \return 0 for OK, -1 for bad parameter */
-SPAN_DECLARE(int) v27ter_rx_restart(v27ter_rx_state_t *s, int bit_rate, int old_train);
+SPAN_DECLARE(int) v27ter_rx_restart(v27ter_rx_state_t *s, int bit_rate, bool old_train);
 
 /*! Release a V.27ter modem receive context.
     \brief Release a V.27ter modem receive context.
@@ -111,7 +117,7 @@ SPAN_DECLARE(void) v27ter_rx_set_modem_status_handler(v27ter_rx_state_t *s, mode
     \param len The number of samples in the buffer.
     \return The number of samples unprocessed.
 */
-SPAN_DECLARE_NONSTD(int) v27ter_rx(v27ter_rx_state_t *s, const int16_t amp[], int len);
+SPAN_DECLARE(int) v27ter_rx(v27ter_rx_state_t *s, const int16_t amp[], int len);
 
 /*! Fake processing of a missing block of received V.27ter modem audio samples.
     (e.g due to packet loss).
@@ -120,13 +126,17 @@ SPAN_DECLARE_NONSTD(int) v27ter_rx(v27ter_rx_state_t *s, const int16_t amp[], in
     \param len The number of samples to fake.
     \return The number of samples unprocessed.
 */
-SPAN_DECLARE_NONSTD(int) v27ter_rx_fillin(v27ter_rx_state_t *s, int len);
+SPAN_DECLARE(int) v27ter_rx_fillin(v27ter_rx_state_t *s, int len);
 
 /*! Get a snapshot of the current equalizer coefficients.
     \brief Get a snapshot of the current equalizer coefficients.
     \param coeffs The vector of complex coefficients.
     \return The number of coefficients in the vector. */
+#if defined(SPANDSP_USE_FIXED_POINT)
+SPAN_DECLARE(int) v27ter_rx_equalizer_state(v27ter_rx_state_t *s, complexi16_t **coeffs);
+#else
 SPAN_DECLARE(int) v27ter_rx_equalizer_state(v27ter_rx_state_t *s, complexf_t **coeffs);
+#endif
 
 /*! Get the current received carrier frequency.
     \param s The modem context.

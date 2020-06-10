@@ -51,18 +51,20 @@ struct v17_tx_state_s
 
 #if defined(SPANDSP_USE_FIXED_POINT)
     /*! \brief The gain factor needed to achieve the specified output power. */
-    int32_t gain;
+    int16_t gain;
     /*! \brief A pointer to the constellation currently in use. */
     const complexi16_t *constellation;
     /*! \brief The root raised cosine (RRC) pulse shaping filter buffer. */
-    complexi16_t rrc_filter[2*V17_TX_FILTER_STEPS];
+    int16_t rrc_filter_re[V17_TX_FILTER_STEPS];
+    int16_t rrc_filter_im[V17_TX_FILTER_STEPS];
 #else
     /*! \brief The gain factor needed to achieve the specified output power. */
     float gain;
     /*! \brief A pointer to the constellation currently in use. */
     const complexf_t *constellation;
     /*! \brief The root raised cosine (RRC) pulse shaping filter buffer. */
-    complexf_t rrc_filter[2*V17_TX_FILTER_STEPS];
+    float rrc_filter_re[V17_TX_FILTER_STEPS];
+    float rrc_filter_im[V17_TX_FILTER_STEPS];
 #endif
 
     /*! \brief Current offset into the RRC pulse shaping filter buffer. */
@@ -78,11 +80,11 @@ struct v17_tx_state_s
     /*! \brief The register for the data scrambler. */
     uint32_t scramble_reg;
     /*! \brief Scrambler tap */
-    //int scrambler_tap;
-    /*! \brief TRUE if transmitting the training sequence. FALSE if transmitting user data. */
-    int in_training;
-    /*! \brief TRUE if the short training sequence is to be used. */
-    int short_train;
+    int scrambler_tap;
+    /*! \brief True if transmitting the training sequence. False if transmitting user data. */
+    bool in_training;
+    /*! \brief True if the short training sequence is to be used. */
+    bool short_train;
     /*! \brief A counter used to track progress through sending the training sequence. */
     int training_step;
 

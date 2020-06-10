@@ -201,11 +201,11 @@ typedef struct
 */
 typedef struct t38_core_state_s t38_core_state_t;
 
-typedef int (t38_tx_packet_handler_t)(t38_core_state_t *s, void *user_data, const uint8_t *buf, int len, int count);
+typedef int (*t38_tx_packet_handler_t)(t38_core_state_t *s, void *user_data, const uint8_t *buf, int len, int count);
 
-typedef int (t38_rx_indicator_handler_t)(t38_core_state_t *s, void *user_data, int indicator);
-typedef int (t38_rx_data_handler_t)(t38_core_state_t *s, void *user_data, int data_type, int field_type, const uint8_t *buf, int len);
-typedef int (t38_rx_missing_handler_t)(t38_core_state_t *s, void *user_data, int rx_seq_no, int expected_seq_no);
+typedef int (*t38_rx_indicator_handler_t)(t38_core_state_t *s, void *user_data, int indicator);
+typedef int (*t38_rx_data_handler_t)(t38_core_state_t *s, void *user_data, int data_type, int field_type, const uint8_t *buf, int len);
+typedef int (*t38_rx_missing_handler_t)(t38_core_state_t *s, void *user_data, int rx_seq_no, int expected_seq_no);
 
 #if defined(__cplusplus)
 extern "C"
@@ -288,7 +288,7 @@ SPAN_DECLARE(int) t38_core_send_data_multi_field(t38_core_state_t *s, int data_t
     \param len The length of the packet contents.
     \param seq_no The packet sequence number.
     \return 0 for OK, else -1. */
-SPAN_DECLARE_NONSTD(int) t38_core_rx_ifp_packet(t38_core_state_t *s, const uint8_t *buf, int len, uint16_t seq_no);
+SPAN_DECLARE(int) t38_core_rx_ifp_packet(t38_core_state_t *s, const uint8_t *buf, int len, uint16_t seq_no);
 
 /*! \brief Process a received T.38 IFP packet from a reliable stream (e.g. TCP).
     \param s The T.38 context.
@@ -296,7 +296,7 @@ SPAN_DECLARE_NONSTD(int) t38_core_rx_ifp_packet(t38_core_state_t *s, const uint8
     \param len The length of the packet contents.
     \param seq_no The packet sequence number, used for logging purposes.
     \return The length of the packet processed, or -1 if there is an error in the packet, or too few bytes of data to complete it. */
-SPAN_DECLARE_NONSTD(int) t38_core_rx_ifp_stream(t38_core_state_t *s, const uint8_t *buf, int len, uint16_t log_seq_no);
+SPAN_DECLARE(int) t38_core_rx_ifp_stream(t38_core_state_t *s, const uint8_t *buf, int len, uint16_t log_seq_no);
 
 /*! Set the method to be used for data rate management, as per the T.38 spec.
     \param s The T.38 context.
@@ -312,21 +312,21 @@ SPAN_DECLARE(void) t38_set_data_transport_protocol(t38_core_state_t *s, int data
 
 /*! Set the non-ECM fill bit removal mode.
     \param s The T.38 context.
-    \param fill_bit_removal TRUE to remove fill bits across the T.38 link, else FALSE.
+    \param fill_bit_removal True to remove fill bits across the T.38 link.
 */
-SPAN_DECLARE(void) t38_set_fill_bit_removal(t38_core_state_t *s, int fill_bit_removal);
+SPAN_DECLARE(void) t38_set_fill_bit_removal(t38_core_state_t *s, bool fill_bit_removal);
 
 /*! Set the MMR transcoding mode.
     \param s The T.38 context.
-    \param mmr_transcoding TRUE to transcode to MMR across the T.38 link, else FALSE.
+    \param mmr_transcoding True to transcode to MMR across the T.38 link.
 */
-SPAN_DECLARE(void) t38_set_mmr_transcoding(t38_core_state_t *s, int mmr_transcoding);
+SPAN_DECLARE(void) t38_set_mmr_transcoding(t38_core_state_t *s, bool mmr_transcoding);
 
 /*! Set the JBIG transcoding mode.
     \param s The T.38 context.
-    \param jbig_transcoding TRUE to transcode to JBIG across the T.38 link, else FALSE.
+    \param jbig_transcoding True to transcode to JBIG across the T.38 link.
 */
-SPAN_DECLARE(void) t38_set_jbig_transcoding(t38_core_state_t *s, int jbig_transcoding);
+SPAN_DECLARE(void) t38_set_jbig_transcoding(t38_core_state_t *s, bool jbig_transcoding);
 
 /*! Set the maximum buffer size for received data at the far end.
     \param s The T.38 context.
@@ -363,16 +363,16 @@ SPAN_DECLARE(void) t38_set_t38_version(t38_core_state_t *s, int t38_version);
 
 /*! Set the sequence number handling option.
     \param s The T.38 context.
-    \param check TRUE to check sequence numbers, and handle gaps reasonably. FALSE
+    \param check True to check sequence numbers, and handle gaps reasonably. False
            for no sequence number processing (e.g. for TPKT over TCP transport).
 */
-SPAN_DECLARE(void) t38_set_sequence_number_handling(t38_core_state_t *s, int check);
+SPAN_DECLARE(void) t38_set_sequence_number_handling(t38_core_state_t *s, bool check);
 
 /*! Set the TEP handling option.
     \param s The T.38 context.
-    \param allow_for_tep TRUE to allow for TEP playout, else FALSE.
+    \param allow_for_tep True to allow for TEP playout.
 */
-SPAN_DECLARE(void) t38_set_tep_handling(t38_core_state_t *s, int allow_for_tep);
+SPAN_DECLARE(void) t38_set_tep_handling(t38_core_state_t *s, bool allow_for_tep);
 
 /*! Get a pointer to the logging context associated with a T.38 context.
     \brief Get a pointer to the logging context associated with a T.38 context.
@@ -398,11 +398,11 @@ SPAN_DECLARE(int) t38_core_restart(t38_core_state_t *s);
     \param tx_packet_user_data An opaque pointer passed to the tx_packet_handler.
     \return A pointer to the T.38 context, or NULL if there was a problem. */
 SPAN_DECLARE(t38_core_state_t *) t38_core_init(t38_core_state_t *s,
-                                               t38_rx_indicator_handler_t *rx_indicator_handler,
-                                               t38_rx_data_handler_t *rx_data_handler,
-                                               t38_rx_missing_handler_t *rx_missing_handler,
+                                               t38_rx_indicator_handler_t rx_indicator_handler,
+                                               t38_rx_data_handler_t rx_data_handler,
+                                               t38_rx_missing_handler_t rx_missing_handler,
                                                void *rx_user_data,
-                                               t38_tx_packet_handler_t *tx_packet_handler,
+                                               t38_tx_packet_handler_t tx_packet_handler,
                                                void *tx_packet_user_data);
 
 /*! Release a signaling tone transmitter context.

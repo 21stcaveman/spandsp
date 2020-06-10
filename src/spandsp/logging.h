@@ -33,11 +33,8 @@
 #if !defined(_SPANDSP_LOGGING_H_)
 #define _SPANDSP_LOGGING_H_
 
-/*! General logging function for spandsp logging. */
-typedef void (*message_handler_func_t)(int level, const char *text);
-
-/*! Error logging function for spandsp logging. */
-typedef void (*error_handler_func_t)(const char *text);
+/*! Logging function for spandsp logging. */
+typedef void (*message_handler_func_t)(void *user_data, int level, const char *text);
 
 /* Logging elements */
 enum
@@ -83,9 +80,9 @@ extern "C"
     \brief Test if logging of a specified severity level is enabled.
     \param s The logging context.
     \param level The severity level to be tested.
-    \return TRUE if logging is enable, else FALSE.
+    \return True if logging is enable.
 */
-SPAN_DECLARE(int) span_log_test(logging_state_t *s, int level);
+SPAN_DECLARE(bool) span_log_test(logging_state_t *s, int level);
 
 /*! Generate a log entry.
     \brief Generate a log entry.
@@ -107,9 +104,15 @@ SPAN_DECLARE(int) span_log(logging_state_t *s, int level, const char *format, ..
 */
 SPAN_DECLARE(int) span_log_buf(logging_state_t *s, int level, const char *tag, const uint8_t *buf, int len);
 
+SPAN_DECLARE(int) span_log_get_level(logging_state_t *s);
+
 SPAN_DECLARE(int) span_log_set_level(logging_state_t *s, int level);
 
+SPAN_DECLARE(const char *) span_log_get_tag(logging_state_t *s);
+
 SPAN_DECLARE(int) span_log_set_tag(logging_state_t *s, const char *tag);
+
+SPAN_DECLARE(const char *) span_log_get_protocol(logging_state_t *s);
 
 SPAN_DECLARE(int) span_log_set_protocol(logging_state_t *s, const char *protocol);
 
@@ -117,13 +120,9 @@ SPAN_DECLARE(int) span_log_set_sample_rate(logging_state_t *s, int samples_per_s
 
 SPAN_DECLARE(int) span_log_bump_samples(logging_state_t *s, int samples);
 
-SPAN_DECLARE(void) span_log_set_message_handler(logging_state_t *s, message_handler_func_t func);
+SPAN_DECLARE(void) span_log_set_message_handler(logging_state_t *s, message_handler_func_t func, void *user_data);
 
-SPAN_DECLARE(void) span_log_set_error_handler(logging_state_t *s, error_handler_func_t func);
-
-SPAN_DECLARE(void) span_set_message_handler(message_handler_func_t func);
-
-SPAN_DECLARE(void) span_set_error_handler(error_handler_func_t func);
+SPAN_DECLARE(void) span_set_message_handler(message_handler_func_t func, void *user_data);
 
 SPAN_DECLARE(logging_state_t *) span_log_init(logging_state_t *s, int level, const char *tag);
 

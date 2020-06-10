@@ -41,10 +41,14 @@
 #if defined(HAVE_MATH_H)
 #include <math.h>
 #endif
+#if defined(HAVE_STDBOOL_H)
+#include <stdbool.h>
+#else
+#include "spandsp/stdbool.h"
+#endif
 #include "floating_fudge.h"
 
 #include "spandsp/telephony.h"
-#include "spandsp/dc_restore.h"
 #include "spandsp/lpc10.h"
 #include "spandsp/private/lpc10.h"
 
@@ -79,7 +83,7 @@ static void remove_dc_bias(float speech[], int len, float sigout[])
 
 static void eval_amdf(float speech[],
                       int32_t lpita,
-                      const int32_t tau[], 
+                      const int32_t tau[],
                       int32_t ltau,
                       int32_t maxlag,
                       float amdf[],
@@ -112,7 +116,7 @@ static void eval_amdf(float speech[],
 
 static void eval_highres_amdf(float speech[],
                               int32_t lpita,
-                              const int32_t tau[], 
+                              const int32_t tau[],
                               int32_t ltau,
                               float amdf[],
                               int32_t *minptr,
@@ -350,7 +354,7 @@ static void onset(lpc10_encode_state_t *s,
                     osbuf[*osptr - 1] = i - 9;
                     (*osptr)++;
                 }
-                s->hyst = TRUE;
+                s->hyst = true;
             }
             s->lasti = i;
             /* After one onset detection, at least OSHYST sample times must go */
@@ -358,7 +362,7 @@ static void onset(lpc10_encode_state_t *s,
         }
         else if (s->hyst  &&  i - s->lasti >= 10)
         {
-            s->hyst = FALSE;
+            s->hyst = false;
         }
     }
 }
@@ -548,11 +552,10 @@ void lpc10_analyse(lpc10_encode_state_t *s, float speech[], int32_t voice[], int
 {
     static const int32_t tau[60] =
     {
-        20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 
-        35, 36, 37, 38, 39, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58,
-        60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80, 84, 88, 92, 96,
-        100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144,
-        148, 152, 156
+         20,  21,  22,  23,  24,  25,  26,  27,  28,  29,  30,  31,  32,  33,  34,
+         35,  36,  37,  38,  39,  40,  42,  44,  46,  48,  50,  52,  54,  56,  58,
+         60,  62,  64,  66,  68,  70,  72,  74,  76,  78,  80,  84,  88,  92,  96,
+        100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 148, 152, 156
     };
     static const int32_t buflim[4] =
     {
@@ -561,7 +564,7 @@ void lpc10_analyse(lpc10_encode_state_t *s, float speech[], int32_t voice[], int
     static const float precoef = 0.9375f;
 
     float amdf[60];
-    float abuf[156];
+    float abuf[LPC10_MIN_PITCH];
     float ivrc[2];
     float temp;
     float phi[100]    /* was [10][10] */;
@@ -631,7 +634,7 @@ void lpc10_analyse(lpc10_encode_state_t *s, float speech[], int32_t voice[], int
     s->zpre = preemp(&s->inbuf[i - 181], &s->pebuf[i - 181], LPC10_SAMPLES_PER_FRAME, precoef, s->zpre);
     onset(s, s->pebuf, s->osbuf, &s->osptr, 10, 181, 720, LPC10_SAMPLES_PER_FRAME);
 
-    lpc10_placev(s->osbuf, &s->osptr, 10, &s->obound[2], s->vwin, 3, LPC10_SAMPLES_PER_FRAME, 90, 156, 307, 462);
+    lpc10_placev(s->osbuf, &s->osptr, 10, &s->obound[2], s->vwin, 3, LPC10_SAMPLES_PER_FRAME, 90, LPC10_MIN_PITCH, 307, 462);
     /* The Pitch Extraction algorithm estimates the pitch for a frame
        of speech by locating the minimum of the average magnitude difference
        function (AMDF).  The AMDF operates on low-pass, inverse filtered
@@ -652,7 +655,7 @@ void lpc10_analyse(lpc10_encode_state_t *s, float speech[], int32_t voice[], int
     /* eval_highres_amdf reads indices PWINL = 229 through
        (PWINL-1)+MAXWIN+(TAU(LTAU)-TAU(1))/2 = 452 of IVBUF, and writes
        indices 1 through LTAU = 60 of AMDF. */
-    eval_highres_amdf(s->ivbuf, 156, tau, 60, amdf, &minptr, &maxptr, &mintau);
+    eval_highres_amdf(s->ivbuf, LPC10_MIN_PITCH, tau, 60, amdf, &minptr, &maxptr, &mintau);
     /* Voicing decisions are made for each half frame of input speech.
        An initial voicing classification is made for each half of the
        analysis frame, and the voicing decisions for the present frame
@@ -685,7 +688,7 @@ void lpc10_analyse(lpc10_encode_state_t *s, float speech[], int32_t voice[], int
     dynamic_pitch_tracking(s, amdf, 60, &minptr, s->voibuf[3][1], pitch, &midx);
     ipitch = tau[midx - 1];
     /* Place spectrum analysis and energy windows */
-    lpc10_placea(&ipitch, s->voibuf, &s->obound[2], 3, s->vwin, s->awin, ewin, LPC10_SAMPLES_PER_FRAME, 156);
+    lpc10_placea(&ipitch, s->voibuf, &s->obound[2], 3, s->vwin, s->awin, ewin, LPC10_SAMPLES_PER_FRAME, LPC10_MIN_PITCH);
     /* Remove short term DC bias over the analysis window. */
     lanal = s->awin[2][1] + 1 - s->awin[2][0];
     remove_dc_bias(&s->pebuf[s->awin[2][0] - 181], lanal, abuf);

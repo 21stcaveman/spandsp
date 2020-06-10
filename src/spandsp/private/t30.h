@@ -44,24 +44,33 @@ struct t30_state_s
     int operation_in_progress;
 
     /*! \brief True if behaving as the calling party */
-    int calling_party;
-    
+    bool calling_party;
+
+    /*! \brief True if bad quality pages should be kept */
+    bool keep_bad_pages;
+
     /*! \brief Internet aware FAX mode bit mask. */
     int iaf;
     /*! \brief A bit mask of the currently supported modem types. */
     int supported_modems;
-    /*! \brief A bit mask of the currently supported image compression modes. */
+    /*! \brief A bit mask of the currently supported image compression modes for use
+               between FAX entities. */
     int supported_compressions;
-    /*! \brief A bit mask of the currently supported image resolutions. */
-    int supported_resolutions;
+    /*! \brief A bit mask of the currently supported image compression modes for the output
+               of received page images. */
+    int supported_output_compressions;
+    /*! \brief A bit mask of the currently supported bi-level image resolutions. */
+    int supported_bilevel_resolutions;
+    /*! \brief A bit mask of the currently supported gray-scale and colour image resolutions. */
+    int supported_colour_resolutions;
     /*! \brief A bit mask of the currently supported image sizes. */
     int supported_image_sizes;
     /*! \brief A bit mask of the currently supported T.30 special features. */
     int supported_t30_features;
     /*! \brief True is ECM mode handling is enabled. */
-    int ecm_allowed;
+    bool ecm_allowed;
     /*! \brief True if we are capable of retransmitting pages */
-    int retransmit_capable;
+    bool retransmit_capable;
 
     /*! \brief The received DCS, formatted as an ASCII string, for inclusion
                in the TIFF file. */
@@ -72,14 +81,14 @@ struct t30_state_s
     /*! \brief True for FAX page headers to overlay (i.e. replace) the beginning of the
                page image. False for FAX page headers to add to the overall length of
                the page. */
-    int header_overlays_image;
+    bool header_overlays_image;
     /*! \brief Use private timezone if true */
-    int use_own_tz;
+    bool use_own_tz;
     /*! \brief Optional per instance time zone for the FAX page header timestamp. */
     tz_t tz;
 
     /*! \brief True if remote T.30 procedural interrupts are allowed. */
-    int remote_interrupts_allowed;
+    bool remote_interrupts_allowed;
 
     /*! \brief The information fields received. */
     t30_exchanged_info_t rx_info;
@@ -94,44 +103,53 @@ struct t30_state_s
 
     /*! \brief A pointer to a callback routine to be called when phase B events
         occur. */
-    t30_phase_b_handler_t *phase_b_handler;
+    t30_phase_b_handler_t phase_b_handler;
     /*! \brief An opaque pointer supplied in event B callbacks. */
     void *phase_b_user_data;
     /*! \brief A pointer to a callback routine to be called when phase D events
         occur. */
-    t30_phase_d_handler_t *phase_d_handler;
+    t30_phase_d_handler_t phase_d_handler;
     /*! \brief An opaque pointer supplied in event D callbacks. */
     void *phase_d_user_data;
     /*! \brief A pointer to a callback routine to be called when phase E events
         occur. */
-    t30_phase_e_handler_t *phase_e_handler;
+    t30_phase_e_handler_t phase_e_handler;
     /*! \brief An opaque pointer supplied in event E callbacks. */
     void *phase_e_user_data;
     /*! \brief A pointer to a callback routine to be called when frames are
         exchanged. */
-    t30_real_time_frame_handler_t *real_time_frame_handler;
+    t30_real_time_frame_handler_t real_time_frame_handler;
     /*! \brief An opaque pointer supplied in real time frame callbacks. */
     void *real_time_frame_user_data;
 
     /*! \brief A pointer to a callback routine to be called when document events
         (e.g. end of transmitted document) occur. */
-    t30_document_handler_t *document_handler;
+    t30_document_handler_t document_handler;
     /*! \brief An opaque pointer supplied in document callbacks. */
     void *document_user_data;
 
     /*! \brief The handler for changes to the receive mode */
-    t30_set_handler_t *set_rx_type_handler;
+    t30_set_handler_t set_rx_type_handler;
     /*! \brief An opaque pointer passed to the handler for changes to the receive mode */
     void *set_rx_type_user_data;
     /*! \brief The handler for changes to the transmit mode */
-    t30_set_handler_t *set_tx_type_handler;
+    t30_set_handler_t set_tx_type_handler;
     /*! \brief An opaque pointer passed to the handler for changes to the transmit mode */
     void *set_tx_type_user_data;
 
     /*! \brief The transmitted HDLC frame handler. */
-    t30_send_hdlc_handler_t *send_hdlc_handler;
+    t30_send_hdlc_handler_t send_hdlc_handler;
     /*! \brief An opaque pointer passed to the transmitted HDLC frame handler. */
     void *send_hdlc_user_data;
+
+    /*! \brief The document send handler. */
+    t30_document_get_handler_t document_get_handler;
+    /*! \brief An opaque pointer passed to the document send handler. */
+    void *document_get_user_data;
+    /*! \brief The document delivery handler. */
+    t30_document_put_handler_t document_put_handler;
+    /*! \brief An opaque pointer passed to the document delivery handler. */
+    void *document_put_user_data;
 
     /*! \brief The DIS code for the minimum scan row time we require. This is usually 0ms,
         but if we are trying to simulate another type of FAX machine, we may need a non-zero
@@ -157,17 +175,15 @@ struct t30_state_s
     int local_dis_dtc_len;
     /*! \brief The last DIS or DTC message received form the far end. */
     uint8_t far_dis_dtc_frame[T30_MAX_DIS_DTC_DCS_LEN];
-    /*! \brief The length of the last DIS or DTC message received form the far end. */
-    int far_dis_dtc_len;
     /*! \brief True if a valid DIS has been received from the far end. */
-    int dis_received;
+    bool dis_received;
 
     /*! \brief True if the short training sequence should be used. */
-    int short_train;
+    bool short_train;
 
     /*! \brief True if an image carrier appears to have been received, even if it did not successfully
         train. */
-    int image_carrier_attempted;
+    bool image_carrier_attempted;
 
     /*! \brief A count of the number of bits in the trainability test. This counts down to zero when
         sending TCF, and counts up when receiving it. */
@@ -182,11 +198,11 @@ struct t30_state_s
     /*! \brief The subset of supported modems allowed at the current time, allowing for negotiation. */
     int current_permitted_modems;
     /*! \brief True if a carrier is present. Otherwise false. */
-    int rx_signal_present;
+    bool rx_signal_present;
     /*! \brief True if a modem has trained correctly. */
-    int rx_trained;
+    bool rx_trained;
     /*! \brief True if a valid HDLC frame has been received in the current reception period. */
-    int rx_frame_received;
+    bool rx_frame_received;
 
     /*! \brief Current reception mode. */
     int current_rx_type;
@@ -215,29 +231,41 @@ struct t30_state_s
     int timer_t8;
 
     /*! \brief True once the far end FAX entity has been detected. */
-    int far_end_detected;
+    bool far_end_detected;
 
     /*! \brief True once the end of procedure condition has been detected. */
-    int end_of_procedure_detected;
+    bool end_of_procedure_detected;
 
     /*! \brief True if a local T.30 interrupt is pending. */
-    int local_interrupt_pending;
+    bool local_interrupt_pending;
+    /*! \brief The common ground in compression schemes between the local and far ends. */
+    int mutual_compressions;
+    /*! \brief The common group of supported bi-level image resolutions. */
+    int mutual_bilevel_resolutions;
+    /*! \brief The common group of supported colour image resolutions. */
+    int mutual_colour_resolutions;
+    /*! \brief The common group of supported image sizes. */
+    int mutual_image_sizes;
     /*! \brief The image coding being used on the line. */
-    int line_encoding;
-    /*! \brief The image coding being used for output files. */
-    int output_encoding;
+    int line_compression;
+    /*! \brief The image type being used on the line. */
+    int line_image_type;
+    /*! \brief The width code for the image on the line. */
+    int line_width_code;
     /*! \brief The current DCS message minimum scan time code. */
     uint8_t min_scan_time_code;
     /*! \brief The X direction resolution of the current image, in pixels per metre. */
     int x_resolution;
     /*! \brief The Y direction resolution of the current image, in pixels per metre. */
     int y_resolution;
+    /*! \brief The resolution code for the current page. */
+    int current_page_resolution;
     /*! \brief The width of the current image, in pixels. */
     t4_image_width_t image_width;
     /*! \brief Current number of retries of the action in progress. */
     int retries;
     /*! \brief True if error correcting mode is used. */
-    int error_correcting_mode;
+    bool error_correcting_mode;
     /*! \brief The number of HDLC frame retries, if error correcting mode is used. */
     int error_correcting_mode_retries;
     /*! \brief The current count of consecutive T30_PPR messages. */
@@ -267,11 +295,10 @@ struct t30_state_s
     int ecm_current_tx_frame;
     /*! \brief True if we are at the end of an ECM page to se sent - i.e. there are no more
         partial pages still to come. */
-    int ecm_at_page_end;
+    bool ecm_at_page_end;
 
     /*! \brief The last result for a received non-ECM page - T30_MPS, T30_RTP, or T30_RTN. */
     int last_rx_page_result;
-
     /*! \brief The transmission step queued to follow the one in progress. */
     int next_tx_step;
     /*! \brief The FCF for the next receive step. */
@@ -292,7 +319,7 @@ struct t30_state_s
     /*! \brief the FCF2 field of the last PPS message we received. */
     uint8_t last_pps_fcf2;
     /*! \brief True if all frames of the current received ECM block are now OK */
-    int rx_ecm_block_ok;
+    bool rx_ecm_block_ok;
     /*! \brief A count of successfully received ECM frames, to assess progress as a basis for
         deciding whether to continue error correction when PPRs keep repeating. */
     int ecm_progress;

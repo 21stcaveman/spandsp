@@ -29,9 +29,6 @@
 \section t35_tests_page_sec_1 What does it do?
 */
 
-/* Enable the following definition to enable direct probing into the structures */
-//#define WITH_SPANDSP_INTERNALS
-
 #if defined(HAVE_CONFIG_H)
 #include "config.h"
 #endif
@@ -44,10 +41,6 @@
 #include <assert.h>
 #include <sndfile.h>
 
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
-
 #include "spandsp.h"
 
 int main(int argc, char *argv[])
@@ -59,7 +52,7 @@ int main(int argc, char *argv[])
     const char *country;
     const char *model;
     const char *real_country;
-    int first_hit;
+    bool first_hit;
 
     printf("Sweep through all the possible countries\n");
     for (i = 0;  i < 256;  i++)
@@ -82,7 +75,7 @@ int main(int argc, char *argv[])
         msg[0] = i;
         msg[1] = '\x00';
         msg[2] = '\x00';
-        first_hit = TRUE;
+        first_hit = true;
         for (j = 0;  j < 65536;  j++)
         {
             msg[1] = (j >> 8) & 0xFF;
@@ -95,7 +88,7 @@ int main(int argc, char *argv[])
                         printf("%s\n", real_country);
                     else
                         printf("???\n");
-                    first_hit = FALSE;
+                    first_hit = false;
                 }
                 printf("    0x%02x 0x%02x 0x%02x '%s'\n", msg[0], msg[1], msg[2], vendor);
             }
@@ -111,7 +104,7 @@ int main(int argc, char *argv[])
     printf("Decoded as %s %s %s\n", (country)  ?  country  :  "???", (vendor)  ?  vendor  :  "???", (model)  ?  model  :  "???");
 
     printf("Tests passed\n");
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

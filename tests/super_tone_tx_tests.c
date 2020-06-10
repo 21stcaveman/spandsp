@@ -42,7 +42,6 @@
 #include <ctype.h>
 #include <time.h>
 #include <inttypes.h>
-#include <sys/socket.h>
 #include <sndfile.h>
 
 #if defined(HAVE_LIBXML_XMLMEMORY_H)
@@ -54,10 +53,6 @@
 #if defined(HAVE_LIBXML_XINCLUDE_H)
 #include <libxml/xinclude.h>
 #endif
-
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
 
 #include "spandsp.h"
 #include "spandsp-sim.h"

@@ -44,10 +44,6 @@
 #include <time.h>
 #include <sndfile.h>
 
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
-
 #include "spandsp.h"
 #include "spandsp-sim.h"
 
@@ -67,7 +63,7 @@ int main(int argc, char *argv[])
         exit(2);
     }
 
-    gen = dtmf_tx_init(NULL);
+    gen = dtmf_tx_init(NULL, NULL, NULL);
     len = dtmf_tx(gen, amp, 16384);
     printf("Generated %d samples\n", len);
     sf_writef_short(outhandle, amp, len);
@@ -121,7 +117,7 @@ int main(int argc, char *argv[])
     }
     while (len > 0);
 
-    dtmf_tx_init(gen);
+    dtmf_tx_init(gen, NULL, NULL);
     len = dtmf_tx(gen, amp, 16384);
     printf("Generated %d samples\n", len);
     sf_writef_short(outhandle, amp, len);
@@ -192,7 +188,7 @@ int main(int argc, char *argv[])
         exit(2);
     }
 
-    add_digits = TRUE;
+    add_digits = true;
     do
     {
         len = dtmf_tx(gen, amp, 160);
@@ -204,7 +200,7 @@ int main(int argc, char *argv[])
             if (dtmf_tx_put(gen, "1234567890", -1))
             {
                 printf("Digit buffer full\n");
-                add_digits = FALSE;
+                add_digits = false;
             }
         }
     }
@@ -215,8 +211,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "    Cannot close audio file '%s'\n", OUTPUT_FILE_NAME);
         exit(2);
     }
+    dtmf_tx_free(gen);
 
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

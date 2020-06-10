@@ -38,10 +38,6 @@
 #include <time.h>
 #include <sndfile.h>
 
-//#if defined(WITH_SPANDSP_INTERNALS)
-#define SPANDSP_EXPOSE_INTERNAL_STRUCTURES
-//#endif
-
 #include "spandsp.h"
 #include "spandsp-sim.h"
 
@@ -72,9 +68,8 @@ int main(int argc, char *argv[])
                              200,
                              300,
                              400,
-                             FALSE);
+                             false);
     tone_gen_init(&tone_state, &tone_desc);
-
     for (i = 0;  i < 1000;  i++)
     {
         len = tone_gen(&tone_state, amp, 160);
@@ -83,7 +78,8 @@ int main(int argc, char *argv[])
             break;
         sf_writef_short(outhandle, amp, len);
     }
-    
+    tone_gen_release(&tone_state);
+
     /* Try a different tone pair */
     tone_gen_descriptor_init(&tone_desc,
                              350,
@@ -94,9 +90,8 @@ int main(int argc, char *argv[])
                              300,
                              200,
                              100,
-                             TRUE);
+                             true);
     tone_gen_init(&tone_state, &tone_desc);
-
     for (i = 0;  i < 1000;  i++)
     {
         len = tone_gen(&tone_state, amp, 160);
@@ -105,6 +100,7 @@ int main(int argc, char *argv[])
             break;
         sf_writef_short(outhandle, amp, len);
     }
+    tone_gen_release(&tone_state);
 
     /* Try a different tone pair */
     tone_gen_descriptor_init(&tone_desc,
@@ -116,9 +112,8 @@ int main(int argc, char *argv[])
                              200,
                              300,
                              400,
-                             TRUE);
+                             true);
     tone_gen_init(&tone_state, &tone_desc);
-
     for (i = 0;  i < 1000;  i++)
     {
         len = tone_gen(&tone_state, amp, 160);
@@ -127,6 +122,7 @@ int main(int argc, char *argv[])
             break;
         sf_writef_short(outhandle, amp, len);
     }
+    tone_gen_release(&tone_state);
 
     /* Try a single tone */
     tone_gen_descriptor_init(&tone_desc,
@@ -138,9 +134,8 @@ int main(int argc, char *argv[])
                              200,
                              300,
                              400,
-                             TRUE);
+                             true);
     tone_gen_init(&tone_state, &tone_desc);
-
     for (i = 0;  i < 1000;  i++)
     {
         len = tone_gen(&tone_state, amp, 160);
@@ -149,6 +144,7 @@ int main(int argc, char *argv[])
             break;
         sf_writef_short(outhandle, amp, len);
     }
+    tone_gen_release(&tone_state);
 
     /* Try a single non-repeating tone */
     tone_gen_descriptor_init(&tone_desc,
@@ -160,9 +156,8 @@ int main(int argc, char *argv[])
                              0,
                              0,
                              0,
-                             FALSE);
+                             false);
     tone_gen_init(&tone_state, &tone_desc);
-
     for (i = 0;  i < 1000;  i++)
     {
         len = tone_gen(&tone_state, amp, 160);
@@ -171,6 +166,7 @@ int main(int argc, char *argv[])
             break;
         sf_writef_short(outhandle, amp, len);
     }
+    tone_gen_release(&tone_state);
 
     /* Try a single non-repeating tone at 0dBm0 */
     tone_gen_descriptor_init(&tone_desc,
@@ -182,9 +178,8 @@ int main(int argc, char *argv[])
                              0,
                              0,
                              0,
-                             FALSE);
+                             false);
     tone_gen_init(&tone_state, &tone_desc);
-
     for (i = 0;  i < 1000;  i++)
     {
         len = tone_gen(&tone_state, amp, 160);
@@ -193,6 +188,7 @@ int main(int argc, char *argv[])
             break;
         sf_writef_short(outhandle, amp, len);
     }
+    tone_gen_release(&tone_state);
 
     /* Try an AM modulated tone at a modest modulation level (25%) */
     tone_gen_descriptor_init(&tone_desc,
@@ -204,9 +200,8 @@ int main(int argc, char *argv[])
                              200,
                              300,
                              400,
-                             TRUE);
+                             true);
     tone_gen_init(&tone_state, &tone_desc);
-
     for (i = 0;  i < 1000;  i++)
     {
         len = tone_gen(&tone_state, amp, 160);
@@ -215,7 +210,8 @@ int main(int argc, char *argv[])
             break;
         sf_writef_short(outhandle, amp, len);
     }
-    
+    tone_gen_release(&tone_state);
+
     /* Try an AM modulated tone at maximum modulation level (100%) */
     tone_gen_descriptor_init(&tone_desc,
                              425,
@@ -226,9 +222,8 @@ int main(int argc, char *argv[])
                              200,
                              300,
                              400,
-                             TRUE);
+                             true);
     tone_gen_init(&tone_state, &tone_desc);
-
     for (i = 0;  i < 1000;  i++)
     {
         len = tone_gen(&tone_state, amp, 160);
@@ -237,14 +232,15 @@ int main(int argc, char *argv[])
             break;
         sf_writef_short(outhandle, amp, len);
     }
-    
+    tone_gen_release(&tone_state);
+
     if (sf_close_telephony(outhandle))
     {
         fprintf(stderr, "    Cannot close audio file '%s'\n", OUTPUT_FILE_NAME);
         exit (2);
     }
 
-    return  0;
+    return 0;
 }
 /*- End of function --------------------------------------------------------*/
 /*- End of file ------------------------------------------------------------*/

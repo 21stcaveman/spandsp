@@ -29,11 +29,10 @@
 /* Target length for the equalizer is about 63 taps, to deal with the worst stuff
    in V.56bis. */
 /*! The length of the equalizer buffer */
-//#define V17_EQUALIZER_LEN           33
-#define V17_EQUALIZER_LEN           17
+#define V17_EQUALIZER_LEN           33
+
 /*! Samples before the target position in the equalizer buffer */
-//#define V17_EQUALIZER_PRE_LEN       16
-#define V17_EQUALIZER_PRE_LEN       8
+#define V17_EQUALIZER_PRE_LEN       16
 
 /*! The number of taps in the pulse shaping/bandpass filter */
 #define V17_RX_FILTER_STEPS         27
@@ -72,21 +71,14 @@ struct v17_rx_state_s
                routine. */
     void *qam_user_data;
 
-#if 1 //defined(RESCALER_TEST)
-    /* Experimental data for AGC tolerance */
-    int16_t power_window[40];
-    int power_window_ptr;
-    int64_t window_power;
-    int64_t window_power_save;
-#endif
 #if defined(SPANDSP_USE_FIXED_POINTx)
-    /*! \brief The scaling factor accessed by the AGC algorithm. */
-    float agc_scaling;
+    /*! \brief The scaling factor assessed by the AGC algorithm. */
+    int16_t agc_scaling;
     /*! \brief The previous value of agc_scaling, needed to reuse old training. */
-    float agc_scaling_save;
+    int16_t agc_scaling_save;
 
     /*! \brief The current delta factor for updating the equalizer coefficients. */
-    float eq_delta;
+    int16_t eq_delta;
     /*! \brief The adaptive equalizer coefficients. */
     complexi16_t eq_coeff[V17_EQUALIZER_LEN];
     /*! \brief A saved set of adaptive equalizer coefficients for use after restarts. */
@@ -105,19 +97,19 @@ struct v17_rx_state_s
 
     /*! \brief A measure of how much mismatch there is between the real constellation,
         and the decoded symbol positions. */
-    float training_error;
+    int32_t training_error;
 
     /*! \brief The proportional part of the carrier tracking filter. */
-    float carrier_track_p;
+    int32_t carrier_track_p;
     /*! \brief The integral part of the carrier tracking filter. */
-    float carrier_track_i;
+    int32_t carrier_track_i;
     /*! \brief The root raised cosine (RRC) pulse shaping filter buffer. */
     int16_t rrc_filter[V17_RX_FILTER_STEPS];
 
     /*! \brief A pointer to the current constellation. */
     const complexi16_t *constellation;
 #else
-    /*! \brief The scaling factor accessed by the AGC algorithm. */
+    /*! \brief The scaling factor assessed by the AGC algorithm. */
     float agc_scaling;
     /*! \brief The previous value of agc_scaling, needed to reuse old training. */
     float agc_scaling_save;
@@ -162,10 +154,10 @@ struct v17_rx_state_s
     /*! \brief The register for the data scrambler. */
     uint32_t scramble_reg;
     /*! \brief Scrambler tap */
-    //int scrambler_tap;
+    int scrambler_tap;
 
-    /*! \brief TRUE if the short training sequence is to be used. */
-    int short_train;
+    /*! \brief True if the short training sequence is to be used. */
+    bool short_train;
     /*! \brief The section of the training data we are currently in. */
     int training_stage;
     /*! \brief A count of how far through the current training step we are. */
@@ -188,7 +180,7 @@ struct v17_rx_state_s
     /*! \brief The carrier update rate saved for reuse when using short training. */
     int32_t carrier_phase_rate_save;
 
-    /*! \brief A power meter, to measure the HPF'ed signal power in the channel. */    
+    /*! \brief A power meter, to measure the HPF'ed signal power in the channel. */
     power_meter_t power;
     /*! \brief The power meter level at which carrier on is declared. */
     int32_t carrier_on_power;
@@ -209,10 +201,11 @@ struct v17_rx_state_s
                This is only for performance analysis purposes. */
     int total_baud_timing_correction;
 
-    /*! \brief Starting phase angles for the coarse carrier aquisition step. */
-    int32_t start_angles[2];
-    /*! \brief History list of phase angles for the coarse carrier aquisition step. */
-    int32_t angles[16];
+    /*! \brief The previous symbol phase angles for the coarse carrier aquisition step. */
+    int32_t last_angles[2];
+    /*! \brief History list of phase angle differences for the coarse carrier aquisition step. */
+    int32_t diff_angles[16];
+
     /*! \brief A pointer to the current space map. There is a space map for
                each trellis state. */
     int space_map;

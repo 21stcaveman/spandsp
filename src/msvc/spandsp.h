@@ -36,16 +36,24 @@
 
 #define SPANDSP_USE_EXPORT_CAPABILITY 1
 
+#undef SPANDSP_SUPPORT_T43
+#undef SPANDSP_SUPPORT_V32BIS
+#undef SPANDSP_SUPPORT_V34
+#undef SPANDSP_SUPPORT_TIFF_FX
+
 #include <stdlib.h>
 #include <msvc/inttypes.h>
 #include <string.h>
 #include <limits.h>
 #include <time.h>
 #include <math.h>
-@INSERT_STDBOOL_HEADER@
 #include <tiffio.h>
 
+#if !defined(__cplusplus)
+#include <spandsp/stdbool.h>
+#endif
 #include <spandsp/telephony.h>
+#include <spandsp/alloc.h>
 #include <spandsp/fast_convert.h>
 #include <spandsp/logging.h>
 #include <spandsp/complex.h>
@@ -89,17 +97,21 @@
 #include <spandsp/modem_connect_tones.h>
 #include <spandsp/silence_gen.h>
 #include <spandsp/v8.h>
-#include <spandsp/v42.h>
-#include <spandsp/v42bis.h>
 #include <spandsp/v29rx.h>
 #include <spandsp/v29tx.h>
 #include <spandsp/v17rx.h>
 #include <spandsp/v17tx.h>
-/*#include <spandsp/v32bis.h>*/
 #include <spandsp/v22bis.h>
 #include <spandsp/v27ter_rx.h>
 #include <spandsp/v27ter_tx.h>
-/*#include <spandsp/v34.h>*/
+#if defined(SPANDSP_SUPPORT_V32BIS)
+#include <spandsp/v32bis.h>
+#endif
+#if defined(SPANDSP_SUPPORT_V34)
+#include <spandsp/v34.h>
+#endif
+#include <spandsp/v42.h>
+#include <spandsp/v42bis.h>
 #include <spandsp/v18.h>
 #include <spandsp/timezone.h>
 #include <spandsp/t4_rx.h>
@@ -107,14 +119,17 @@
 #include <spandsp/image_translate.h>
 #include <spandsp/t4_t6_decode.h>
 #include <spandsp/t4_t6_encode.h>
-/*#include <spandsp/t81_t82_arith_coding.h>*/
-/*#include <spandsp/t85.h>*/
+#include <spandsp/t81_t82_arith_coding.h>
+#include <spandsp/t85.h>
+#include <spandsp/t42.h>
+#include <spandsp/t43.h>
 #include <spandsp/t30.h>
 #include <spandsp/t30_api.h>
 #include <spandsp/t30_fcf.h>
 #include <spandsp/t30_logging.h>
 #include <spandsp/t35.h>
 #include <spandsp/at_interpreter.h>
+#include <spandsp/data_modems.h>
 #include <spandsp/fax_modems.h>
 #include <spandsp/fax.h>
 #include <spandsp/t38_core.h>

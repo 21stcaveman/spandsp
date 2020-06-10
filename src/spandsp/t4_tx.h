@@ -28,15 +28,18 @@
 #if !defined(_SPANDSP_T4_TX_H_)
 #define _SPANDSP_T4_TX_H_
 
-//#define SPANDSP_SUPPORT_TIFF_FX
-
 /*! This function is a callback from the image decoders, to read the unencoded bi-level image,
     row by row. It is called for each row, with len set to the number of bytes per row expected.
     \return len for OK, or zero to indicate the end of the image data. */
 typedef int (*t4_row_read_handler_t)(void *user_data, uint8_t buf[], size_t len);
 
-#if defined(SPANDSP_SUPPORT_TIFF_FX)
-/* TIFF-FX related extensions to the tag set supported by libtiff */
+/*!
+    T.4 FAX compression/decompression descriptor. This defines the working state
+    for a single instance of a T.4 FAX compression or decompression channel.
+*/
+typedef struct t4_tx_state_s t4_tx_state_t;
+
+/* TIFF-FX related extensions to the TIFF tag set */
 
 /*
 Indexed(346) = 0, 1.                                                SHORT
@@ -49,7 +52,7 @@ Indexed(346) = 0, 1.                                                SHORT
     profile supports palette-color images with the ITULAB encoding.
     The SamplesPerPixel value must be 1.
 
-GlobalParametersIFD (400)                                            IFD
+GlobalParametersIFD (400)                                           IFD/LONG
     An IFD containing global parameters. It is recommended that a TIFF
     writer place this field in the first IFD, where a TIFF reader would
     find it quickly.
@@ -171,6 +174,10 @@ ImageLayer(34732)                                                   LONG
         3: ...
 */
 
+/* Define the TIFF/FX tags to extend libtiff, when using a version of libtiff where this
+   stuff has not been merged. We only need to define these things for older versions of
+   libtiff. */
+#if defined(SPANDSP_SUPPORT_TIFF_FX)  &&  !defined(TIFFTAG_FAXPROFILE)
 #define TIFFTAG_INDEXED                 346
 #define TIFFTAG_GLOBALPARAMETERSIFD     400
 #define TIFFTAG_PROFILETYPE             401
@@ -197,15 +204,30 @@ ImageLayer(34732)                                                   LONG
 #define TIFFTAG_T82OPTIONS              435
 #define TIFFTAG_STRIPROWCOUNTS          559
 #define TIFFTAG_IMAGELAYER              34732
+#endif
 
+#if !defined(COMPRESSION_T85)
 #define     COMPRESSION_T85             9
+#endif
+#if !defined(COMPRESSION_T43)
 #define     COMPRESSION_T43             10
 #endif
 
-typedef struct t4_state_s t4_tx_state_t;
+typedef enum
+{
+    T4_IMAGE_FORMAT_OK = 0,
+    T4_IMAGE_FORMAT_INCOMPATIBLE = -1,
+    T4_IMAGE_FORMAT_NOSIZESUPPORT = -2,
+    T4_IMAGE_FORMAT_NORESSUPPORT = -3
+} t4_image_format_status_t;
 
 #if defined(__cplusplus)
 extern "C" {
+#endif
+
+#if defined(SPANDSP_SUPPORT_TIFF_FX)
+/*! \brief Configure libtiff so it recognises the extended tag set for TIFF-FX. */
+SPAN_DECLARE(void) TIFF_FX_init(void);
 #endif
 
 /*! \brief Prepare to send the next page of the current document.
@@ -236,38 +258,71 @@ SPAN_DECLARE(int) t4_tx_end_page(t4_tx_state_t *s);
            moving forward in the buffer. The document will be padded for the
            current minimum scan line time.
     \param s The T.4 context.
-    \return The next bit (i.e. 0 or 1). For the last bit of data, bit 1 is
-            set (i.e. the returned value is 2 or 3). */
-SPAN_DECLARE(int) t4_tx_check_bit(t4_tx_state_t *s);
+    \return 0 for more data to come. SIG_STATUS_END_OF_DATA for no more data. */
+SPAN_DECLARE(int) t4_tx_image_complete(t4_tx_state_t *s);
 
 /*! \brief Get the next bit of the current document page. The document will
            be padded for the current minimum scan line time.
     \param s The T.4 context.
-    \return The next bit (i.e. 0 or 1). For the last bit of data, bit 1 is
-            set (i.e. the returned value is 2 or 3). */
+    \return The next bit (i.e. 0 or 1). SIG_STATUS_END_OF_DATA for no more data. */
 SPAN_DECLARE(int) t4_tx_get_bit(t4_tx_state_t *s);
-
-/*! \brief Get the next byte of the current document page. The document will
-           be padded for the current minimum scan line time.
-    \param s The T.4 context.
-    \return The next byte. For the last byte of data, bit 8 is
-            set. In this case, one or more bits of the byte may be padded with
-            zeros, to complete the byte. */
-SPAN_DECLARE(int) t4_tx_get_byte(t4_tx_state_t *s);
 
 /*! \brief Get the next chunk of the current document page. The document will
            be padded for the current minimum scan line time.
     \param s The T.4 context.
     \param buf The buffer into which the chunk is to written.
     \param max_len The maximum length of the chunk.
-    \return The actual length of the chunk. If this is less than max_len it 
+    \return The actual length of the chunk. If this is less than max_len it
             indicates that the end of the document has been reached. */
-SPAN_DECLARE(int) t4_tx_get_chunk(t4_tx_state_t *s, uint8_t buf[], int max_len);
+SPAN_DECLARE(int) t4_tx_get(t4_tx_state_t *s, uint8_t buf[], size_t max_len);
 
-/*! \brief Set the encoding for the encoded data.
+/*! \brief Get the compression for the encoded data.
     \param s The T.4 context.
-    \param encoding The encoding. */
-SPAN_DECLARE(void) t4_tx_set_tx_encoding(t4_tx_state_t *s, int encoding);
+    \return the chosen compression for success, otherwise -1. */
+SPAN_DECLARE(int) t4_tx_get_tx_compression(t4_tx_state_t *s);
+
+/*! \brief Get the image type of the encoded data.
+    \param s The T.4 context.
+    \return the chosen image type for success, otherwise -1. */
+SPAN_DECLARE(int) t4_tx_get_tx_image_type(t4_tx_state_t *s);
+
+/*! \brief Get the X and Y resolution code of the current page.
+    \param s The T.4 context.
+    \return The resolution code,. */
+SPAN_DECLARE(int) t4_tx_get_tx_resolution(t4_tx_state_t *s);
+
+/*! \brief Get the column-to-column (x) resolution of the current page.
+    \param s The T.4 context.
+    \return The resolution, in pixels per metre. */
+SPAN_DECLARE(int) t4_tx_get_tx_x_resolution(t4_tx_state_t *s);
+
+/*! \brief Get the row-to-row (y) resolution of the current page.
+    \param s The T.4 context.
+    \return The resolution, in pixels per metre. */
+SPAN_DECLARE(int) t4_tx_get_tx_y_resolution(t4_tx_state_t *s);
+
+/*! \brief Get the width of the encoded data.
+    \param s The T.4 context.
+    \return the width, in pixels, for success, otherwise -1. */
+SPAN_DECLARE(int) t4_tx_get_tx_image_width(t4_tx_state_t *s);
+
+/*! \brief Get the width code of the encoded data.
+    \param s The T.4 context.
+    \return the width code, for success, otherwise -1. */
+SPAN_DECLARE(int) t4_tx_get_tx_image_width_code(t4_tx_state_t *s);
+
+/*! \brief Auto-select the format in which to send the image.
+    \param s The T.4 context.
+    \param supported_compressions The set of compressions supported for this transmission
+    \param supported_image_sizes The set of image sizes supported for this transmission
+    \param supported_bilevel_resolutions The set of bi-level resolutions supported for this transmission
+    \param supported_colour_resolutions The set of gray scale and colour resolutions supported for this transmission
+    \return A t4_image_format_status_t result code */
+SPAN_DECLARE(int) t4_tx_set_tx_image_format(t4_tx_state_t *s,
+                                            int supported_compressions,
+                                            int supported_image_sizes,
+                                            int supported_bilevel_resolutions,
+                                            int supported_colour_resolutions);
 
 /*! \brief Set the minimum number of encoded bits per row. This allows the
            makes the encoding process to be set to comply with the minimum row
@@ -275,6 +330,12 @@ SPAN_DECLARE(void) t4_tx_set_tx_encoding(t4_tx_state_t *s, int encoding);
     \param s The T.4 context.
     \param bits The minimum number of bits per row. */
 SPAN_DECLARE(void) t4_tx_set_min_bits_per_row(t4_tx_state_t *s, int bits);
+
+/*! \brief Set the maximum number of 2D encoded rows between 1D encoded rows. This
+           is only valid for T.4 2D encoding.
+    \param s The T.4 context.
+    \param max The maximum number of 2D rows. */
+SPAN_DECLARE(void) t4_tx_set_max_2d_rows_per_1d_row(t4_tx_state_t *s, int max);
 
 /*! \brief Set the identity of the local machine, for inclusion in page headers.
     \param s The T.4 context.
@@ -297,27 +358,18 @@ SPAN_DECLARE(void) t4_tx_set_header_info(t4_tx_state_t *s, const char *info);
     \param tz A time zone descriptor. */
 SPAN_DECLARE(void) t4_tx_set_header_tz(t4_tx_state_t *s, tz_t *tz);
 
+/*! Set page header extends or overlays the image mode.
+    \brief Set page header overlay mode.
+    \param s The T.4 context.
+    \param header_overlays_image True for overlay, or false to extend the page. */
+SPAN_DECLARE(void) t4_tx_set_header_overlays_image(t4_tx_state_t *s, bool header_overlays_image);
+
 /*! \brief Set the row read handler for a T.4 transmit context.
     \param s The T.4 transmit context.
     \param handler A pointer to the handler routine.
     \param user_data An opaque pointer passed to the handler routine.
     \return 0 for success, otherwise -1. */
 SPAN_DECLARE(int) t4_tx_set_row_read_handler(t4_tx_state_t *s, t4_row_read_handler_t handler, void *user_data);
-
-/*! \brief Get the row-to-row (y) resolution of the current page.
-    \param s The T.4 context.
-    \return The resolution, in pixels per metre. */
-SPAN_DECLARE(int) t4_tx_get_y_resolution(t4_tx_state_t *s);
-
-/*! \brief Get the column-to-column (x) resolution of the current page.
-    \param s The T.4 context.
-    \return The resolution, in pixels per metre. */
-SPAN_DECLARE(int) t4_tx_get_x_resolution(t4_tx_state_t *s);
-
-/*! \brief Get the width of the current page, in pixel columns.
-    \param s The T.4 context.
-    \return The number of columns. */
-SPAN_DECLARE(int) t4_tx_get_image_width(t4_tx_state_t *s);
 
 /*! \brief Get the number of pages in the file.
     \param s The T.4 context.
@@ -329,11 +381,17 @@ SPAN_DECLARE(int) t4_tx_get_pages_in_file(t4_tx_state_t *s);
     \return The page number, or -1 if there is an error. */
 SPAN_DECLARE(int) t4_tx_get_current_page_in_file(t4_tx_state_t *s);
 
-/*! Get the current image transfer statistics. 
+/*! Get the current image transfer statistics.
     \brief Get the current transfer statistics.
     \param s The T.4 context.
     \param t A pointer to a statistics structure. */
 SPAN_DECLARE(void) t4_tx_get_transfer_statistics(t4_tx_state_t *s, t4_stats_t *t);
+
+/*! Get the logging context associated with a T.4 transmit context.
+    \brief Get the logging context associated with a T.4 transmit context.
+    \param s The T.4 transmit context.
+    \return A pointer to the logging context */
+SPAN_DECLARE(logging_state_t *) t4_tx_get_logging_state(t4_tx_state_t *s);
 
 /*! \brief Prepare for transmission of a document.
     \param s The T.4 context.

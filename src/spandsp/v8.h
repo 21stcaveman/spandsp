@@ -22,7 +22,7 @@
  * License along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
- 
+
 /*! \file */
 
 /*! \page v8_page The V.8 modem negotiation protocol
@@ -135,19 +135,19 @@ extern "C"
 #endif
 
 SPAN_DECLARE(int) v8_restart(v8_state_t *s,
-                             int calling_party,
+                             bool calling_party,
                              v8_parms_t *parms);
 
 /*! Initialise a V.8 context.
     \brief Initialise a V.8 context.
     \param s The V.8 context.
-    \param calling_party TRUE if caller mode, else answerer mode.
+    \param calling_party True if caller mode, else answerer mode.
     \param parms The allowed parameters for the call.
     \param result_handler The callback routine used to handle the results of negotiation.
     \param user_data An opaque pointer passed to the result_handler routine.
     \return A pointer to the V.8 context, or NULL if there was a problem. */
 SPAN_DECLARE(v8_state_t *) v8_init(v8_state_t *s,
-                                   int calling_party,
+                                   bool calling_party,
                                    v8_parms_t *parms,
                                    v8_result_handler_t result_handler,
                                    void *user_data);
@@ -173,7 +173,7 @@ SPAN_DECLARE(logging_state_t *) v8_get_logging_state(v8_state_t *s);
     \param max_len The number of samples to be generated.
     \return The number of samples actually generated.
 */
-SPAN_DECLARE_NONSTD(int) v8_tx(v8_state_t *s, int16_t *amp, int max_len);
+SPAN_DECLARE(int) v8_tx(v8_state_t *s, int16_t *amp, int max_len);
 
 /*! Process a block of received V.8 audio samples.
     \brief Process a block of received V.8 audio samples.
@@ -181,7 +181,7 @@ SPAN_DECLARE_NONSTD(int) v8_tx(v8_state_t *s, int16_t *amp, int max_len);
     \param amp The audio sample buffer.
     \param len The number of samples in the buffer.
 */
-SPAN_DECLARE_NONSTD(int) v8_rx(v8_state_t *s, const int16_t *amp, int len);
+SPAN_DECLARE(int) v8_rx(v8_state_t *s, const int16_t *amp, int len);
 
 /*! Log the list of supported modulations.
     \brief Log the list of supported modulations.
